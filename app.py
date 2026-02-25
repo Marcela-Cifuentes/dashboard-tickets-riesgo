@@ -10,6 +10,9 @@ from nltk.corpus import stopwords
 
 st.set_page_config(page_title="Dashboard Tickets - Riesgo Operativo", layout="wide")
 
+st.markdown("## Sistema de alerta temprana de riesgo operativo")
+st.caption("Modelo predictivo basado en análisis histórico de tickets")
+
 # ===============================
 # CARGA DE DATOS
 # ===============================
@@ -180,4 +183,5 @@ if submit:
     )
 
     st.success(f"Probabilidad riesgo: {round(proba,3)}")
+
     st.info(f"Nivel: {nivel}")
