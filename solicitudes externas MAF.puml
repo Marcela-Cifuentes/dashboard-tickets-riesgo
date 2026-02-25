@@ -1,0 +1,53 @@
+@startuml proceso MAF
+title Flujo AS-IS - Solicitudes Externas
+
+skinparam linetype ortho
+skinparam dpi 150
+
+|Usuario Externo|
+start
+:Registra solicitud en plataforma de tickets;
+
+|Sistema de Tickets|
+:Ticket ingresa al sistema;
+
+|Mesa de Ayuda|
+:Asignación según disponibilidad del personal;
+
+note right
+La priorización no siempre se basa
+en matriz formal de Impacto/Urgencia
+end note
+
+:Revisión inicial del caso;
+
+if (¿Se puede resolver en Mesa de Ayuda?) then (Sí)
+  :Soluciona ticket;
+else (No)
+  :Escala al área correspondiente;
+endif
+
+|Área Responsable|
+:Atiende el caso;
+
+if (¿Adjunta evidencia?) then (Sí)
+  :Adjunta evidencia de gestión;
+else (No)
+  note right
+  No siempre se adjunta evidencia
+  de resolución
+  end note
+endif
+
+
+:Procede al cierre del ticket;
+
+note right
+No existe control formal
+de validación antes del cierre
+end note
+
+|Usuario Externo|
+:Recibe notificación de cierre;
+stop
+@enduml

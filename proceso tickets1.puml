@@ -1,0 +1,116 @@
+@startuml flujo_ideal
+title Flujo TO-BE - Gestión de Tickets TI (Modelo N1-N2-N3)
+
+skinparam linetype ortho
+skinparam dpi 150
+
+|Usuario|
+start
+:Identifica incidente / solicitud;
+
+if (¿Cómo ingresa a la plataforma?) then (Link público)
+  :Accede por link público;
+elseif (Link interno)
+  :Accede por link interno (solicitudes/requerimientos);
+endif
+
+if (¿Canal de radicación?) then (Chatbot)
+  |Chatbot|
+  :Recepción automática;
+  :Validación básica (datos mínimos);
+  if (¿Resuelve con base de conocimiento?) then (Sí)
+    :Entrega solución automática;
+    stop
+  else (No)
+    :Genera ticket;
+  endif
+elseif (Link / Formulario)
+  |Sistema|
+  :Radica solicitud por link/formulario;
+else (Correo)
+  |Sistema|
+  :Recepción de correo;
+  :Radica ticket desde correo;
+endif
+
+|Sistema|
+:Registro/Ingreso al sistema;
+:Clasificación (Incidente / Requerimiento);
+:Priorización (Impacto x Urgencia);
+:Asignación de SLA/ANS;
+:Enrutamiento y asignación (N1 / N2 / N3);
+
+|Service Desk - N1|
+:Atención inicial;
+
+if (¿Resuelto en N1?) then (Sí)
+  :Documentar solución;
+  :Notificar usuario;
+  :Cierre del ticket (N1);
+  |Usuario|
+  if (¿Confirma cierre?) then (Sí)
+    :Confirma cierre;
+    |Sistema|
+    :Envía encuesta de satisfacción;
+    stop
+  else (No)
+    :Solicita reapertura / ajuste;
+    |Service Desk - N1|
+    :Reapertura y nueva gestión;
+  endif
+else (No)
+  :Escalar a N2;
+endif
+
+|Soporte Técnico/Pedagógico - N2|
+:Análisis funcional;
+:Soporte LMS / CRM;
+:Incidentes de aplicación;
+:Validación técnica;
+
+if (¿Resuelto en N2?) then (Sí)
+  :Documentar solución;
+  :Notificar usuario;
+  :Cierre del ticket (N2);
+  |Usuario|
+  if (¿Confirma cierre?) then (Sí)
+    :Confirma cierre;
+    |Sistema|
+    :Envía encuesta de satisfacción;
+    stop
+  else (No)
+    :Solicita reapertura / ajuste;
+    |Soporte Técnico/Pedagógico - N2|
+    :Reapertura y nueva gestión;
+  endif
+else (No)
+  :Escalar a N3;
+endif
+
+|Soporte Especializado - N3|
+:Análisis avanzado;
+:Desarrollo / Corrección de bugs;
+:Cambios técnicos complejos;
+:Implementación de solución;
+:Documentar causa raíz (RCA);
+
+if (¿Requiere redirección de proceso?) then (Sí)
+  :Devolver a N2/N1 para gestión;
+endif
+
+:Notificar usuario;
+:Cierre del ticket (N3);
+
+|Usuario|
+if (¿Confirma cierre?) then (Sí)
+  :Confirma cierre;
+  |Sistema|
+  :Envía encuesta de satisfacción;
+  stop
+else (No)
+  :Solicita reapertura / ajuste;
+  |Soporte Especializado - N3|
+  :Reapertura y nueva gestión;
+endif
+
+@enduml

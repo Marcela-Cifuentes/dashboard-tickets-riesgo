@@ -1,0 +1,39 @@
+@startuml modelo
+title Estados del Ticket (Métricas / SLA / Trazabilidad)
+
+skinparam linetype ortho
+skinparam shadowing false
+skinparam dpi 170
+
+skinparam state {
+  RoundCorner 14
+  BorderColor #2C3E50
+  FontColor #2C3E50
+}
+
+state "Registrado\nT0: creación" as S0 #E8F8F5
+state "Clasificado\nT1: triage" as S1 #EAF2F8
+state "Asignado\nT2: inicio SLA operativo" as S2 #FDEBD0
+state "En Atención\n(Tiempo activo)" as S3 #FEF9E7
+state "En Espera\n(Pausa SLA)" as S4 #F5EEF8
+state "Escalado\n(Control niveles)" as S5 #FADBD8
+state "Resuelto\n(Detiene SLA técnico)" as S6 #E9F7EF
+state "Validación Usuario\n(ventana 48h)" as S7 #EBF5FB
+state "Cerrado\nKPI: CSAT" as S8 #EAECEE
+
+[*] --> S0
+S0 --> S1
+S1 --> S2
+S2 --> S3
+
+S3 --> S4 : espera (usuario/proveedor)
+S4 --> S3 : respuesta recibida
+
+S3 --> S5 : escalamiento
+S5 --> S2 : reasignación
+
+S3 --> S6 : solución aplicada
+S6 --> S7
+S7 --> S8 : confirma / auto-cierre
+S8 --> [*]
+@enduml

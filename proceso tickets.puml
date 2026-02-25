@@ -1,0 +1,95 @@
+
+@startuml proceso_tickets 
+
+title Flujo TO-BE - Gestión de Tickets TI (Optimizado) 
+skinparam linetype ortho 
+skinparam dpi 120 
+
+|Usuario| 
+start 
+:Identifica incidente / solicitud; 
+
+if (¿Modo de ingreso?) then (Link público) 
+  :Accede por link público; 
+elseif (Link interno) 
+  :Accede por link interno; 
+endif 
+ 
+
+if (¿Canal?) then (Chatbot) 
+  |Chatbot| 
+  :Recepción automática;  
+  :Validación básica (datos mínimos); 
+  if (¿Resuelve con base de conocimiento?) then (Sí) 
+    :Entrega solución; 
+    stop 
+  else (No) 
+    :Genera ticket y transfiere a sistema; 
+  endif 
+elseif (Correo) 
+  |Sistema| 
+  :Convierte correo en ticket; 
+else (Formulario) 
+  |Sistema| 
+  :Radica ticket; 
+endif 
+
+|Sistema| 
+:Registro formal en plataforma;  
+:Clasificación (Incidente / Requerimiento);  
+:Priorización (Impacto x Urgencia);  
+:Asignación de SLA/ANS; 
+:Enruta a N1/N2/N3; }
+
+|Nivel de Soporte (N1)| 
+:Atención y gestión; 
+:Atención inicial;  
+
+if (¿Resuelto en N1?) then (Sí)  
+  :Documentar solución; 
+  :Notificar usuario; 
+  stop  
+else (No) 
+  :Escalar a Nivel 2;  
+endif 
+
+|Soporte Técnico/Pedagógico - (N2)| 
+:Análisis funcional; 
+:Soporte LMS / CRM; 
+:Incidentes de aplicación; 
+:Validación técnica; 
+if (¿Resuelto en N2?) then (Sí) 
+  :Documentar solución; 
+  :Notificar usuario; 
+  stop  
+else (No) 
+  :Escalar a Nivel 3;  
+endif  
+
+|Soporte Especializado - (N3)|  
+:Análisis avanzado;  
+:Desarrollo / Corrección de bugs;  
+:Cambios técnicos complejos;  
+:Implementación de solución; 
+:Documenta solución; 
+:Cierra ticket; 
+
+ |Usuario| 
+
+if (¿Confirma cierre?) then (Sí) 
+
+  |Sistema| 
+
+  :Envía encuesta satisfacción; 
+
+  stop 
+
+else (No) 
+  :Reapertura; 
+  :Nueva gestión; 
+
+endif 
+
+@enduml 
+
+ 

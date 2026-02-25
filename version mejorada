@@ -1,0 +1,160 @@
+@startuml opcional
+title Flujo TO-BE - Gestión de Tickets TI (Modelo N1-N2-N3) - Reforzado
+
+skinparam linetype ortho
+skinparam dpi 170
+skinparam shadowing false
+skinparam activity {
+  BackgroundColor White
+  BorderColor Black
+  ArrowColor Black
+}
+
+'========================
+' ACTORES / LANES
+'========================
+|Usuario|
+start
+:Identifica incidente / solicitud;
+
+if (¿Modo de ingreso?) then (Link público)
+  :Accede por link público;
+elseif (Link interno)
+  :Accede por link interno\n(solicitudes/requerimientos);
+else (Correo)
+  :Envía correo a mesa de ayuda;
+endif
+
+'========================
+' RADICACIÓN (CANALES)
+'========================
+if (¿Canal de radicación?) then (Chatbot)
+  |Chatbot|
+  :Recepción automática;
+  :Validación básica\n(datos mínimos);
+  :Consulta base de conocimiento (KB);
+
+  if (¿Solución disponible en KB?) then (Sí)
+    :Entrega solución automática;
+    |Usuario|
+    if (¿Soluciona?) then (Sí)
+      stop
+    else (No)
+      |Chatbot|
+      :Genera ticket;
+    endif
+  else (No)
+    :Genera ticket;
+  endif
+
+elseif (Link / Formulario)
+  |Sistema|
+  :Radica por link/formulario;
+  :Validación básica\n(campos obligatorios);
+
+else (Correo)
+  |Sistema|
+  :Recepción de correo;
+  :Extrae datos (asunto/cuerpo/remitente);
+  :Radica ticket desde correo;
+  :Validación básica\n(campos mínimos);
+endif
+
+'========================
+' REGISTRO + TRIAGE
+'========================
+|Sistema|
+:Registro/Ingreso al sistema;
+:Control anti-duplicados\n(tema/usuario/ventana de tiempo);
+
+if (¿Ticket duplicado?) then (Sí)
+  :Relaciona con ticket existente;
+  :Notifica al usuario el ticket relacionado;
+  stop
+endif
+
+:Clasificación\n(Incidente / Requerimiento);
+:Priorización\n(Impacto x Urgencia);
+:Asignación SLA/ANS;
+:Inicia contador SLA;
+:Enrutamiento y asignación\n(N1 / N2 / N3);
+
+'========================
+' N1
+'========================
+|Service Desk - N1|
+:Atención inicial;
+:Diagnóstico rápido;
+:Gestión de comunicación con usuario;
+
+if (¿Requiere escalamiento?) then (No)
+  :Documenta solución;
+  :Adjunta evidencia (si aplica);
+  :Cierre técnico N1;
+  -> CONFIRMACION_CIERRE;
+else (Sí)
+  :Escalar a N2;
+endif
+
+'========================
+' N2
+'========================
+|Soporte Técnico/Pedagógico - N2|
+:Análisis funcional;
+:Soporte LMS / CRM;
+:Validación técnica;
+:Gestiona evidencia (si aplica);
+
+if (¿Resuelto en N2?) then (Sí)
+  :Documenta solución;
+  :Adjunta evidencia (si aplica);
+  :Cierre técnico N2;
+  -> CONFIRMACION_CIERRE;
+else (No)
+  :Escalar a N3;
+endif
+
+'========================
+' N3
+'========================
+|Soporte Especializado - N3|
+:Análisis avanzado;
+:Desarrollo / corrección de bugs;
+:Cambios técnicos complejos;
+:Implementa solución;
+
+:Documenta causa raíz (RCA)\n(si aplica por severidad/reincidencia);
+
+if (¿Requiere validación operativa?) then (Sí)
+  :Devuelve a N2/N1 para validación;
+endif
+
+:Adjunta evidencia (si aplica);
+:Cierre técnico N3;
+-> CONFIRMACION_CIERRE;
+
+'========================
+' CONFIRMACIÓN DE CIERRE (UNIFICADA)
+'========================
+|Usuario|
+label CONFIRMACION_CIERRE
+:Recibe notificación de cierre;
+
+if (¿Confirma cierre?) then (Sí)
+  :Confirma cierre;
+  |Sistema|
+  :Envía encuesta de satisfacción;
+  :Cierra ticket (estado final);
+  stop
+else (No)
+  :Solicita reapertura / ajuste;
+  |Sistema|
+  :Reabre ticket;
+  :Pausa contador SLA\n(si espera info del usuario);
+  :Registra motivo de reapertura;
+  :Reasigna al último nivel responsable\n(N1/N2/N3);
+  |Service Desk - N1|
+  :Nueva gestión / escalamiento según diagnóstico;
+endif
+
+@enduml

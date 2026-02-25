@@ -1,0 +1,67 @@
+@startuml proceso TI
+title Flujo actual (AS-IS) - Solicitudes a TI (sin canal único)
+
+start
+
+:Usuario identifica necesidad / incidente / solicitud TI;
+
+if (¿Cómo contacta a TI?) then (Llamada)
+  :Llamada telefónica a persona TI;
+elseif (WhatsApp/Teams)
+  :Mensaje directo a persona TI;
+elseif (Correo personal)
+  :Correo personal a persona TI;
+else (Oral)
+  :Solicitud oral / presencial a persona TI;
+endif
+
+:Gestión directa con la persona TI contactada;
+
+if (¿Se registra formalmente en plataforma?) then (Sí)
+  :Proceso sin realizar;
+  note right
+  Punto crítico:
+    - No se realiza proceso formal por helpdesk
+    - No hay trazabilidad
+  end note
+else (No - frecuente)
+  :Sin registro en plataforma;
+  note right
+    Punto crítico:
+    - No hay trazabilidad completa
+    - No queda evidencia centralizada
+  end note
+endif
+
+if (¿Quién asigna?) then (Personal interno/externo)
+  :Asignación depende de la persona contactada;
+  note right
+    Dependencia por personas:
+    - No depende de rol
+    - No depende de nivel de atención
+  end note
+else (No definido)
+  :Queda "en el aire" / seguimiento informal;
+endif
+
+if (¿Existe priorización estructurada?) then (Sí)
+  :Prioriza y agenda (casos puntuales);
+else (No)
+  :Se atiende por urgencia percibida / disponibilidad;
+  note right
+    Punto crítico:
+    - No priorización formal
+    - Riesgo de inequidad en atención
+  end note
+endif
+
+:Atención / solución (con o sin evidencia);
+
+if (¿Se comunica cierre formal?) then (Sí)
+  :Se informa cierre por el mismo canal;
+else (No)
+  :Cierre implícito / no confirmado;
+endif
+
+stop
+@enduml
