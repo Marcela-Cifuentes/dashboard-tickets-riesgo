@@ -1,4 +1,4 @@
-streamlit
+streamlit>=1.30
 pandas
 numpy
 plotly
@@ -8,3 +8,4 @@ joblib
 openpyxl
 streamlit-autorefresh
 scipy
+
