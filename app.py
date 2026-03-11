@@ -9,22 +9,29 @@ import nltk
 from nltk.corpus import stopwords
 from collections import Counter
 from sklearn.ensemble import IsolationForest
+from sklearn.metrics import roc_curve, auc, confusion_matrix
 from streamlit_autorefresh import st_autorefresh
 
 st.set_page_config(page_title="Sistema Inteligente de Tickets", layout="wide")
 
-st.title(" Sistema Inteligente de Monitoreo de Service Desk")
+st.title("📊 Sistema Inteligente de Monitoreo Service Desk")
 st.caption("Analítica predictiva y monitoreo de riesgo operativo")
 
 # refresco automático cada minuto
-st_autorefresh(interval=60000000, key="refresh")
+st_autorefresh(interval=60000, key="refresh")
 
+# colores SLA
+SLA_COLORS = {
+    "🟢 Dentro SLA": "#2ecc71",
+    "🟡 En riesgo": "#f1c40f",
+    "🔴 Fuera SLA": "#e74c3c"
+}
 
 # ===============================
 # CARGA DATOS
 # ===============================
 
-@st.cache_data
+@st.cache_data(ttl=60)
 def cargar_datos():
 
     df = pd.read_excel("TicketsHD.xlsx")
@@ -55,7 +62,7 @@ def cargar_datos():
 
 
 # ===============================
-# CARGA MODELO
+# MODELO
 # ===============================
 
 @st.cache_resource
@@ -173,7 +180,7 @@ def predecir_dataset(df, modelo, vectorizer, encoder):
 
 
 # ===============================
-# DETECTOR ANOMALIAS
+# ANOMALIAS
 # ===============================
 
 def detectar_anomalias(df):
@@ -190,11 +197,9 @@ def detectar_anomalias(df):
 # ===============================
 
 df = cargar_datos()
-
 modelo, vectorizer, encoder = cargar_modelo()
 
 df["TIPO_INCIDENTE"] = df["TEXTO_COMPLETO"].apply(clasificar_incidente)
-
 
 # ===============================
 # FILTROS
@@ -217,9 +222,8 @@ if prioridad_sel != "Todos":
 if origen_sel != "Todos":
     df_filtrado = df_filtrado[df_filtrado["ORIGEN"] == origen_sel]
 
-
 # ===============================
-# ALERTAS OPERATIVAS
+# ALERTAS
 # ===============================
 
 st.sidebar.markdown("## 🚦 Estado Operacional")
@@ -229,10 +233,8 @@ tickets_riesgo = df_filtrado[df_filtrado["DIAS"] > 5]
 
 if len(tickets_criticos) > 0:
     st.sidebar.error(f"🔴 {len(tickets_criticos)} tickets fuera SLA")
-
 elif len(tickets_riesgo) > 0:
     st.sidebar.warning(f"🟡 {len(tickets_riesgo)} tickets en riesgo")
-
 else:
     st.sidebar.success("🟢 Operación estable")
 
@@ -242,10 +244,10 @@ else:
 # ===============================
 
 tab1, tab2, tab3, tab4 = st.tabs([
-    " Resumen",
-    " Operación",
-    " Riesgo",
-    " Predicción IA"
+    "📊 Resumen",
+    "📈 Operación",
+    "⚠️ Riesgo",
+    "🤖 Modelo"
 ])
 
 
@@ -268,7 +270,12 @@ with tab1:
 
     st.plotly_chart(fig, use_container_width=True)
 
-    fig_sla = px.pie(df_filtrado, names="ESTADO_SLA")
+    fig_sla = px.pie(
+        df_filtrado,
+        names="ESTADO_SLA",
+        color="ESTADO_SLA",
+        color_discrete_map=SLA_COLORS
+    )
 
     st.plotly_chart(fig_sla, use_container_width=True)
 
@@ -280,7 +287,6 @@ with tab1:
 with tab2:
 
     df_tiempo = df_filtrado.copy()
-
     df_tiempo["MES"] = df_tiempo["CREACION"].dt.to_period("M").astype(str)
 
     fig = px.line(
@@ -340,11 +346,9 @@ with tab3:
     st.plotly_chart(fig, use_container_width=True)
 
     texto = " ".join(df_filtrado["TEXTO_COMPLETO"].astype(str))
-
     texto = limpiar_texto(texto)
 
     palabras = texto.split()
-
     conteo = Counter(palabras)
 
     top_palabras = pd.DataFrame(conteo.most_common(20), columns=["Palabra","Frecuencia"])
@@ -381,39 +385,32 @@ with tab3:
 
 
 # ===============================
-# TAB PREDICCION
+# TAB MODELO
 # ===============================
 
 with tab4:
 
-    st.subheader("Predicción de riesgo de nuevo ticket")
+    df_pred = predecir_dataset(df_filtrado.copy(), modelo, vectorizer, encoder)
 
-    asunto = st.text_input("Asunto")
+    y_true = df_pred["RIESGO_OPERATIVO"]
+    y_score = df_pred["PROB_RIESGO"]
 
-    descripcion = st.text_area("Descripción")
+    fpr, tpr, _ = roc_curve(y_true, y_score)
+    roc_auc = auc(fpr, tpr)
 
-    prioridad = st.selectbox("Prioridad", sorted(df["PRIORIDAD"].dropna().unique()))
+    fig_roc = px.line(x=fpr, y=tpr, title=f"Curva ROC (AUC={roc_auc:.2f})")
 
-    grupo = st.selectbox("Grupo", sorted(df["GRUPO"].dropna().unique()))
+    st.plotly_chart(fig_roc, use_container_width=True)
 
-    origen = st.selectbox("Origen", sorted(df["ORIGEN"].dropna().unique()))
+    y_pred = (df_pred["PROB_RIESGO"] > 0.5).astype(int)
 
-    if st.button("Predecir"):
+    cm = confusion_matrix(y_true, y_pred)
 
-        proba, nivel = predecir_riesgo(
-            modelo,
-            vectorizer,
-            encoder,
-            asunto,
-            descripcion,
-            prioridad,
-            grupo,
-            origen
-        )
+    cm_df = pd.DataFrame(cm)
 
-        st.success(f"Probabilidad riesgo: {round(proba,3)}")
+    fig_cm = px.imshow(cm_df, text_auto=True)
 
-        st.info(f"Nivel riesgo: {nivel}")
+    st.plotly_chart(fig_cm, use_container_width=True)
 
 
 
