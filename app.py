@@ -7,11 +7,13 @@ import plotly.express as px
 from scipy.sparse import hstack
 import nltk
 from nltk.corpus import stopwords
+from collections import Counter
+from sklearn.ensemble import IsolationForest
 
 st.set_page_config(page_title="Dashboard Tickets - Riesgo Operativo", layout="wide")
 
-st.markdown("## Sistema de alerta temprana de riesgo operativo")
-st.caption("Modelo predictivo basado en análisis histórico de tickets")
+st.title("📊 Sistema Inteligente de Monitoreo de Tickets")
+st.caption("Analítica predictiva y riesgo operativo en Service Desk")
 
 # ===============================
 # CARGA DE DATOS
@@ -19,6 +21,7 @@ st.caption("Modelo predictivo basado en análisis histórico de tickets")
 
 @st.cache_data
 def cargar_datos():
+
     df = pd.read_excel("TicketsHD.xlsx")
 
     df["CREACION"] = pd.to_datetime(df["CREACION"], errors="coerce")
@@ -32,6 +35,11 @@ def cargar_datos():
     df["RIESGO_OPERATIVO"] = (df["DIAS"] > 5).astype(int)
     df["DEMORA_CRITICA"] = (df["DIAS"] > 7).astype(int)
 
+    df["ESTADO_SLA"] = np.where(
+        df["DIAS"] <= 3, "🟢 Dentro SLA",
+        np.where(df["DIAS"] <= 5, "🟡 En riesgo", "🔴 Fuera SLA")
+    )
+
     df["TEXTO_COMPLETO"] = (
         df["TICKET_ASUNTO"].fillna("") + " " +
         df["TICKET_DESCRIPCION"].fillna("")
@@ -41,18 +49,25 @@ def cargar_datos():
 
 
 # ===============================
-# CARGA MODELO
+# MODELO
 # ===============================
 
 @st.cache_resource
 def cargar_modelo():
+
     modelo = joblib.load("modelo_logreg.pkl")
     vectorizer = joblib.load("vectorizer.pkl")
     encoder = joblib.load("encoder.pkl")
+
     return modelo, vectorizer, encoder
 
 
+# ===============================
+# LIMPIEZA TEXTO
+# ===============================
+
 def limpiar_texto(texto):
+
     try:
         _ = stopwords.words("spanish")
     except:
@@ -63,14 +78,22 @@ def limpiar_texto(texto):
     texto = texto.lower()
     texto = re.sub(r"\d+", "", texto)
     texto = re.sub(r"[^\w\s]", "", texto)
+
     palabras = texto.split()
+
     palabras = [p for p in palabras if p not in stop_words and len(p) > 2]
 
     return " ".join(palabras)
 
 
-def predecir_riesgo(modelo, vectorizer, encoder, asunto, descripcion, prioridad, grupo, origen, threshold=0.35):
+# ===============================
+# PREDICCIÓN INDIVIDUAL
+# ===============================
+
+def predecir_riesgo(modelo, vectorizer, encoder, asunto, descripcion, prioridad, grupo, origen):
+
     texto = f"{asunto} {descripcion}"
+
     texto_limpio = limpiar_texto(texto)
 
     X_text = vectorizer.transform([texto_limpio])
@@ -86,7 +109,6 @@ def predecir_riesgo(modelo, vectorizer, encoder, asunto, descripcion, prioridad,
     X = hstack([X_text, X_cat_enc])
 
     proba = float(modelo.predict_proba(X)[0, 1])
-    pred = int(proba >= threshold)
 
     if proba < 0.35:
         nivel = "Bajo"
@@ -95,14 +117,48 @@ def predecir_riesgo(modelo, vectorizer, encoder, asunto, descripcion, prioridad,
     else:
         nivel = "Alto"
 
-    return proba, pred, nivel
+    return proba, nivel
 
 
 # ===============================
-# INTERFAZ
+# PREDICCIÓN MASIVA
 # ===============================
 
-st.title("📊 Dashboard Tickets - Riesgo Operativo")
+def predecir_dataset(df, modelo, vectorizer, encoder):
+
+    textos = df["TEXTO_COMPLETO"].fillna("").apply(limpiar_texto)
+
+    X_text = vectorizer.transform(textos)
+
+    X_cat = df[["PRIORIDAD","GRUPO","ORIGEN"]]
+
+    X_cat_enc = encoder.transform(X_cat)
+
+    X = hstack([X_text, X_cat_enc])
+
+    probs = modelo.predict_proba(X)[:,1]
+
+    df["PROB_RIESGO"] = probs
+
+    return df
+
+
+# ===============================
+# ANOMALÍAS
+# ===============================
+
+def detectar_anomalias(df):
+
+    iso = IsolationForest(contamination=0.02, random_state=42)
+
+    df["ANOMALIA"] = iso.fit_predict(df[["DIAS"]])
+
+    return df
+
+
+# ===============================
+# CARGA
+# ===============================
 
 df = cargar_datos()
 modelo, vectorizer, encoder = cargar_modelo()
@@ -128,63 +184,157 @@ if prioridad_sel != "Todos":
 if origen_sel != "Todos":
     df_filtrado = df_filtrado[df_filtrado["ORIGEN"] == origen_sel]
 
-# ===============================
-# MÉTRICAS
-# ===============================
-
-col1, col2, col3, col4 = st.columns(4)
-
-col1.metric("Total Tickets", len(df_filtrado))
-col2.metric("Promedio días", round(df_filtrado["DIAS"].mean(), 2))
-col3.metric("% Riesgo >5 días", round(df_filtrado["RIESGO_OPERATIVO"].mean() * 100, 2))
-col4.metric("% Demora >7 días", round(df_filtrado["DEMORA_CRITICA"].mean() * 100, 2))
-
-st.divider()
 
 # ===============================
-# GRÁFICOS
+# TABS
 # ===============================
 
-fig1 = px.histogram(df_filtrado[df_filtrado["DIAS"] <= 30], x="DIAS",
-                    nbins=30, title="Distribución de días (≤30)")
-fig1.add_vline(x=5, line_dash="dash", line_color="red")
-fig1.add_vline(x=7, line_dash="dash", line_color="orange")
-st.plotly_chart(fig1, use_container_width=True)
-
-fig2 = px.bar(
-    df_filtrado.groupby("GRUPO")["RIESGO_OPERATIVO"].mean().reset_index(),
-    x="GRUPO",
-    y="RIESGO_OPERATIVO",
-    title="% Riesgo por Grupo"
-)
-st.plotly_chart(fig2, use_container_width=True)
-
-st.divider()
+tab1, tab2, tab3, tab4 = st.tabs([
+    "📊 Resumen",
+    "📈 Operación",
+    "⚠️ Riesgo",
+    "🔮 Predicción IA"
+])
 
 # ===============================
-# PREDICCIÓN
+# TAB RESUMEN
 # ===============================
 
-st.subheader("🔮 Predicción nuevo ticket")
+with tab1:
 
-with st.form("form_pred"):
+    col1, col2, col3, col4 = st.columns(4)
+
+    col1.metric("Total Tickets", len(df_filtrado))
+    col2.metric("Promedio días", round(df_filtrado["DIAS"].mean(),2))
+    col3.metric("% Riesgo >5 días", round(df_filtrado["RIESGO_OPERATIVO"].mean()*100,2))
+    col4.metric("% Demora crítica", round(df_filtrado["DEMORA_CRITICA"].mean()*100,2))
+
+    st.divider()
+
+    fig = px.histogram(df_filtrado[df_filtrado["DIAS"]<=30], x="DIAS", nbins=30)
+    st.plotly_chart(fig, use_container_width=True)
+
+    fig_sla = px.pie(df_filtrado, names="ESTADO_SLA")
+    st.plotly_chart(fig_sla, use_container_width=True)
+
+
+# ===============================
+# TAB OPERACIÓN
+# ===============================
+
+with tab2:
+
+    df_tiempo = df_filtrado.copy()
+    df_tiempo["MES"] = df_tiempo["CREACION"].dt.to_period("M").astype(str)
+
+    fig = px.line(
+        df_tiempo.groupby("MES").size().reset_index(name="Tickets"),
+        x="MES",
+        y="Tickets",
+        markers=True
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    fig = px.pie(df_filtrado, names="PRIORIDAD")
+    st.plotly_chart(fig, use_container_width=True)
+
+    fig = px.bar(
+        df_filtrado.groupby("ORIGEN").size().reset_index(name="Tickets"),
+        x="ORIGEN",
+        y="Tickets"
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    tabla_heat = pd.crosstab(df_filtrado["GRUPO"], df_filtrado["PRIORIDAD"])
+
+    fig = px.imshow(tabla_heat, text_auto=True)
+
+    st.plotly_chart(fig, use_container_width=True)
+
+
+# ===============================
+# TAB RIESGO
+# ===============================
+
+with tab3:
+
+    fig = px.bar(
+        df_filtrado.groupby("GRUPO")["RIESGO_OPERATIVO"].mean().reset_index(),
+        x="GRUPO",
+        y="RIESGO_OPERATIVO"
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    fig = px.box(df_filtrado, x="GRUPO", y="DIAS")
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    texto = " ".join(df_filtrado["TEXTO_COMPLETO"].astype(str))
+    texto = limpiar_texto(texto)
+
+    palabras = texto.split()
+
+    conteo = Counter(palabras)
+
+    top_palabras = pd.DataFrame(conteo.most_common(20), columns=["Palabra","Frecuencia"])
+
+    fig = px.bar(top_palabras, x="Frecuencia", y="Palabra", orientation="h")
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    df_pred = predecir_dataset(df_filtrado.copy(), modelo, vectorizer, encoder)
+
+    fig = px.histogram(df_pred, x="PROB_RIESGO", nbins=30)
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    top_riesgo = df_pred.sort_values("PROB_RIESGO", ascending=False).head(10)
+
+    st.dataframe(top_riesgo[[
+        "TICKET_ID",
+        "TICKET_ASUNTO",
+        "GRUPO",
+        "PRIORIDAD",
+        "PROB_RIESGO"
+    ]])
+
+    df_anom = detectar_anomalias(df_filtrado.copy())
+
+    fig = px.scatter(df_anom, x="DIAS", y="PRIORIDAD", color="ANOMALIA")
+
+    st.plotly_chart(fig, use_container_width=True)
+
+
+# ===============================
+# TAB PREDICCIÓN
+# ===============================
+
+with tab4:
+
+    st.subheader("Predicción de riesgo de nuevo ticket")
+
     asunto = st.text_input("Asunto")
     descripcion = st.text_area("Descripción")
+
     prioridad = st.selectbox("Prioridad", sorted(df["PRIORIDAD"].dropna().unique()))
     grupo = st.selectbox("Grupo", sorted(df["GRUPO"].dropna().unique()))
     origen = st.selectbox("Origen", sorted(df["ORIGEN"].dropna().unique()))
-    threshold = st.slider("Umbral", 0.1, 0.9, 0.35)
-    submit = st.form_submit_button("Predecir")
 
-if submit:
-    proba, pred, nivel = predecir_riesgo(
-        modelo, vectorizer, encoder,
-        asunto, descripcion, prioridad, grupo, origen, threshold
-    )
+    if st.button("Predecir"):
 
-    st.success(f"Probabilidad riesgo: {round(proba,3)}")
-    st.info(f"Nivel: {nivel}")
-    
+        proba, nivel = predecir_riesgo(
+            modelo,
+            vectorizer,
+            encoder,
+            asunto,
+            descripcion,
+            prioridad,
+            grupo,
+            origen
+        )
 
-
-
+        st.success(f"Probabilidad riesgo: {round(proba,3)}")
+        st.info(f"Nivel riesgo: {nivel}")
