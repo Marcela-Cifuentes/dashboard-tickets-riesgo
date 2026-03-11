@@ -14,7 +14,7 @@ from streamlit_autorefresh import st_autorefresh
 
 st.set_page_config(page_title="Sistema Inteligente de Tickets", layout="wide")
 
-st.title("📊 Sistema Inteligente de Monitoreo Service Desk")
+st.title(" Sistema Inteligente de Monitoreo Help Desk")
 st.caption("Analítica predictiva y monitoreo de riesgo operativo")
 
 # refresco automático cada minuto
@@ -450,6 +450,7 @@ with tab4:
     fig_cm = px.imshow(cm_df, text_auto=True)
 
     st.plotly_chart(fig_cm, use_container_width=True)
+
 
 
 
