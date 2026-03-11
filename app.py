@@ -426,8 +426,8 @@ with tab4:
             origen
         )
 
-    st.success(f"Probabilidad de riesgo: {round(proba,3)}")
-    st.info(f"Nivel de riesgo: {nivel}")
+        st.success(f"Probabilidad de riesgo: {round(proba,3)}")
+        st.info(f"Nivel de riesgo: {nivel}")
     
     df_pred = predecir_dataset(df_filtrado.copy(), modelo, vectorizer, encoder)
 
@@ -450,6 +450,7 @@ with tab4:
     fig_cm = px.imshow(cm_df, text_auto=True)
 
     st.plotly_chart(fig_cm, use_container_width=True)
+
 
 
 
