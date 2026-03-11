@@ -13,7 +13,7 @@ from streamlit_autorefresh import st_autorefresh
 
 st.set_page_config(page_title="Sistema Inteligente de Tickets", layout="wide")
 
-st.title("📊 Sistema Inteligente de Monitoreo de Service Desk")
+st.title(" Sistema Inteligente de Monitoreo de Service Desk")
 st.caption("Analítica predictiva y monitoreo de riesgo operativo")
 
 # refresco automático cada minuto
@@ -242,10 +242,10 @@ else:
 # ===============================
 
 tab1, tab2, tab3, tab4 = st.tabs([
-    "📊 Resumen",
-    "📈 Operación",
-    "⚠️ Riesgo",
-    "🔮 Predicción IA"
+    " Resumen",
+    " Operación",
+    " Riesgo",
+    " Predicción IA"
 ])
 
 
@@ -414,3 +414,4 @@ with tab4:
         st.success(f"Probabilidad riesgo: {round(proba,3)}")
 
         st.info(f"Nivel riesgo: {nivel}")
+
