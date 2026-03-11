@@ -390,6 +390,45 @@ with tab3:
 
 with tab4:
 
+    st.divider()
+
+    st.subheader("🔮 Predicción de riesgo de nuevo ticket")
+
+    asunto = st.text_input("Asunto del ticket")
+    
+    descripcion = st.text_area("Descripción")
+    
+    prioridad = st.selectbox(
+        "Prioridad",
+        sorted(df["PRIORIDAD"].dropna().unique())
+    )
+    
+    grupo = st.selectbox(
+        "Grupo",
+        sorted(df["GRUPO"].dropna().unique())
+    )
+    
+    origen = st.selectbox(
+        "Origen",
+        sorted(df["ORIGEN"].dropna().unique())
+    )
+    
+    if st.button("Predecir riesgo"):
+    
+        proba, nivel = predecir_riesgo(
+            modelo,
+            vectorizer,
+            encoder,
+            asunto,
+            descripcion,
+            prioridad,
+            grupo,
+            origen
+        )
+
+    st.success(f"Probabilidad de riesgo: {round(proba,3)}")
+    st.info(f"Nivel de riesgo: {nivel}")
+    
     df_pred = predecir_dataset(df_filtrado.copy(), modelo, vectorizer, encoder)
 
     y_true = df_pred["RIESGO_OPERATIVO"]
@@ -411,6 +450,7 @@ with tab4:
     fig_cm = px.imshow(cm_df, text_auto=True)
 
     st.plotly_chart(fig_cm, use_container_width=True)
+
 
 
 
