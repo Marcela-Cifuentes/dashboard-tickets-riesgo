@@ -1,8 +1,10 @@
 streamlit
 pandas
+numpy
 plotly
-joblib
 scikit-learn
 nltk
+joblib
 openpyxl
+streamlit-autorefresh
 scipy
