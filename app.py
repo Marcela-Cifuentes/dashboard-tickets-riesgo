@@ -17,7 +17,7 @@ st.title(" Sistema Inteligente de Monitoreo de Service Desk")
 st.caption("Analítica predictiva y monitoreo de riesgo operativo")
 
 # refresco automático cada minuto
-#st_autorefresh(interval=60000, key="refresh")
+st_autorefresh(interval=60000000, key="refresh")
 
 
 # ===============================
@@ -414,5 +414,6 @@ with tab4:
         st.success(f"Probabilidad riesgo: {round(proba,3)}")
 
         st.info(f"Nivel riesgo: {nivel}")
+
 
 
