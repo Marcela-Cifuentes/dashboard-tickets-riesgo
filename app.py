@@ -183,5 +183,122 @@ if submit:
     )
 
     st.success(f"Probabilidad riesgo: {round(proba,3)}")
-
     st.info(f"Nivel: {nivel}")
+    
+# ===============================
+# Evolución de tickets en el tiempo
+# ===============================
+st.subheader("Evolución de tickets en el tiempo")
+
+df_tiempo = df_filtrado.copy()
+df_tiempo["MES"] = df_tiempo["CREACION"].dt.to_period("M").astype(str)
+
+fig3 = px.line(
+    df_tiempo.groupby("MES").size().reset_index(name="Tickets"),
+    x="MES",
+    y="Tickets",
+    markers=True,
+    title="Tickets por mes"
+)
+
+st.plotly_chart(fig3, use_container_width=True)
+
+
+# ===============================
+# Distribución de tickets por prioridad
+# ===============================
+
+st.subheader("Distribución por prioridad")
+
+fig4 = px.pie(
+    df_filtrado,
+    names="PRIORIDAD",
+    title="Proporción de tickets por prioridad"
+)
+
+st.plotly_chart(fig4, use_container_width=True)
+
+
+
+
+# ===============================
+# ETiempo de respuesta por grupo (boxplot)o
+# # ===============================
+
+st.subheader("Tiempo de resolución por grupo")
+
+fig5 = px.box(
+    df_filtrado,
+    x="GRUPO",
+    y="DIAS",
+    title="Distribución de días de resolución por grupo"
+)
+
+st.plotly_chart(fig5, use_container_width=True)
+
+
+
+
+# ===============================
+# Riesgo operativo por prioridad
+# ===============================
+
+st.subheader("Riesgo operativo por prioridad")
+
+fig6 = px.bar(
+    df_filtrado.groupby("PRIORIDAD")["RIESGO_OPERATIVO"]
+    .mean()
+    .reset_index(),
+    x="PRIORIDAD",
+    y="RIESGO_OPERATIVO",
+    title="Probabilidad de riesgo por prioridad"
+)
+
+st.plotly_chart(fig6, use_container_width=True)
+
+
+
+
+
+# ===============================
+# Tickets por origen
+# ===============================
+
+st.subheader("Origen de los tickets")
+
+fig7 = px.bar(
+    df_filtrado.groupby("ORIGEN").size().reset_index(name="Tickets"),
+    x="ORIGEN",
+    y="Tickets",
+    title="Tickets por origen"
+)
+
+st.plotly_chart(fig7, use_container_width=True)
+
+
+
+# ===============================
+# Top 10 asuntos más frecuentes
+# ===============================
+st.subheader("Top 10 asuntos más frecuentes")
+
+top_asuntos = (
+    df_filtrado["TICKET_ASUNTO"]
+    .value_counts()
+    .head(10)
+    .reset_index()
+)
+
+top_asuntos.columns = ["Asunto", "Cantidad"]
+
+fig8 = px.bar(
+    top_asuntos,
+    x="Cantidad",
+    y="Asunto",
+    orientation="h",
+    title="Top 10 asuntos"
+)
+
+st.plotly_chart(fig8, use_container_width=True)
+    st.info(f"Nivel: {nivel}")
+
