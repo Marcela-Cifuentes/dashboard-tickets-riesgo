@@ -244,10 +244,10 @@ else:
 # ===============================
 
 tab1, tab2, tab3, tab4 = st.tabs([
-    "📊 Resumen",
-    "📈 Operación",
-    "⚠️ Riesgo",
-    "🤖 Modelo"
+    " Resumen",
+    " Operación",
+    " Riesgo",
+    " Modelo"
 ])
 
 
@@ -363,7 +363,7 @@ with tab3:
 
     st.plotly_chart(fig_pred, use_container_width=True)
 
-    st.subheader("🚨 Tickets críticos")
+    st.subheader(" Tickets críticos")
 
     criticos = df_filtrado[df_filtrado["DIAS"] > 7]
 
@@ -392,7 +392,7 @@ with tab4:
 
     st.divider()
 
-    st.subheader("🔮 Predicción de riesgo de nuevo ticket")
+    st.subheader(" Predicción de riesgo de nuevo ticket")
 
     asunto = st.text_input("Asunto del ticket")
     
@@ -450,6 +450,7 @@ with tab4:
     fig_cm = px.imshow(cm_df, text_auto=True)
 
     st.plotly_chart(fig_cm, use_container_width=True)
+
 
 
 
