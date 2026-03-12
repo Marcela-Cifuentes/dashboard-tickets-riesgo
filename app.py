@@ -276,13 +276,14 @@ else:
 # TABS
 # ===============================
 
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "Resumen",
     "Operación",
     "Riesgo",
     "Modelo",
     "Comparación",
-    "Agentes"
+    "Agentes",
+    "Gestión Agentes"
 ])
 
 # ===============================
@@ -587,9 +588,6 @@ with tab5:
         
         st.plotly_chart(fig_sla_comp, use_container_width=True)
 
-# ===============================
-# TAB AGENTES
-# ===============================
 
 # ===============================
 # TAB AGENTES
@@ -682,7 +680,7 @@ with tab6:
     # CUMPLIMIENTO SLA POR AGENTE
     # ===============================
 
-    st.subheader("🚦 Cumplimiento SLA por agente")
+    st.subheader(" Cumplimiento SLA por agente")
 
     sla_agente = (
         df_ag.groupby("AGENTE")["DIAS"]
@@ -773,7 +771,7 @@ with tab6:
     # TABLA AGENTE → GRUPO
     # ===============================
 
-    st.subheader("👥 Tabla Agente → Grupo")
+    st.subheader(" Tabla Agente → Grupo")
 
     agente_grupo = (
         df_ag[["AGENTE","GRUPO"]]
@@ -873,4 +871,209 @@ with tab6:
         st.plotly_chart(fig_abiertos, use_container_width=True)
 
 
+# ===============================
+# TAB GESTIÓN AGENTES
+# ===============================
+
+with tab7:
+
+    st.header("Gestión operativa de agentes")
+
+    if "AGENTE" not in df.columns:
+        st.warning("La base no contiene columna AGENTE")
+        st.stop()
+
+    df_ag = df.copy()
+
+    df_ag["MES"] = pd.to_datetime(df_ag["CREACION"], errors="coerce").dt.to_period("M").astype(str)
+
+    # ===============================
+    # FILTROS
+    # ===============================
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        mes_sel = st.selectbox(
+            "Mes",
+            ["Todos"] + sorted(df_ag["MES"].dropna().unique())
+        )
+
+    with col2:
+        agente_sel = st.selectbox(
+            "Agente",
+            ["Todos"] + sorted(df_ag["AGENTE"].dropna().unique())
+        )
+
+    with col3:
+        grupo_sel = st.selectbox(
+            "Grupo",
+            ["Todos"] + sorted(df_ag["GRUPO"].dropna().unique())
+        )
+
+    if mes_sel != "Todos":
+        df_ag = df_ag[df_ag["MES"] == mes_sel]
+
+    if agente_sel != "Todos":
+        df_ag = df_ag[df_ag["AGENTE"] == agente_sel]
+
+    if grupo_sel != "Todos":
+        df_ag = df_ag[df_ag["GRUPO"] == grupo_sel]
+
+    st.divider()
+
+    # ===============================
+    # CARGA DE TRABAJO
+    # ===============================
+
+    st.subheader("Carga de trabajo por agente")
+
+    carga = (
+        df_ag.groupby("AGENTE")
+        .size()
+        .reset_index(name="Tickets")
+        .sort_values("Tickets", ascending=False)
+    )
+
+    fig = px.bar(carga, x="AGENTE", y="Tickets", title="Tickets por agente")
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    # ===============================
+    # SLA POR AGENTE
+    # ===============================
+
+    st.subheader("Cumplimiento SLA por agente")
+
+    sla = (
+        df_ag.groupby("AGENTE")["DIAS"]
+        .apply(lambda x: (x<=5).mean()*100)
+        .reset_index(name="SLA_%")
+    )
+
+    fig = px.bar(sla, x="AGENTE", y="SLA_%")
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    # ===============================
+    # RANKING
+    # ===============================
+
+    st.subheader("Ranking de desempeño")
+
+    ranking = df_ag.groupby("AGENTE").agg(
+        Tickets=("TICKET_ID","count"),
+        Promedio_dias=("DIAS","mean"),
+        SLA=("DIAS", lambda x: (x<=5).mean()*100)
+    ).reset_index()
+
+    ranking = ranking.sort_values("SLA", ascending=False)
+
+    st.dataframe(ranking)
+
+    # ===============================
+    # PRODUCTIVIDAD MENSUAL
+    # ===============================
+
+    st.subheader("Productividad mensual")
+
+    prod = (
+        df_ag.groupby(["MES","AGENTE"])
+        .size()
+        .reset_index(name="Tickets")
+    )
+
+    fig = px.line(prod, x="MES", y="Tickets", color="AGENTE", markers=True)
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    # ===============================
+    # AGENTES SATURADOS
+    # ===============================
+
+    st.subheader("Detección de agentes saturados")
+
+    limite = carga["Tickets"].mean()*1.5
+
+    carga["Estado"] = np.where(
+        carga["Tickets"]>limite,
+        "Sobrecarga",
+        "Normal"
+    )
+
+    fig = px.bar(carga, x="AGENTE", y="Tickets", color="Estado")
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    # ===============================
+    # AGENTE → GRUPO
+    # ===============================
+
+    st.subheader("Relación agente y grupo")
+
+    agente_grupo = (
+        df_ag[["AGENTE","GRUPO"]]
+        .drop_duplicates()
+        .sort_values(["GRUPO","AGENTE"])
+    )
+
+    st.dataframe(agente_grupo)
+
+    # ===============================
+    # RANKING AGENTE VS GRUPO
+    # ===============================
+
+    st.subheader("Ranking por agente y grupo")
+
+    ranking_gr = (
+        df_ag.groupby(["GRUPO","AGENTE"])
+        .agg(
+            Tickets=("TICKET_ID","count"),
+            Promedio_dias=("DIAS","mean")
+        )
+        .reset_index()
+    )
+
+    st.dataframe(ranking_gr)
+
+    # ===============================
+    # INCUMPLIMIENTO SLA POR GRUPO
+    # ===============================
+
+    st.subheader("Incumplimiento SLA por grupo")
+
+    sla_grupo = (
+        df_ag.groupby("GRUPO")["DIAS"]
+        .apply(lambda x: (x>5).mean()*100)
+        .reset_index(name="Incumplimiento_%")
+    )
+
+    fig = px.bar(sla_grupo, x="GRUPO", y="Incumplimiento_%")
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    # ===============================
+    # TICKETS ABIERTOS
+    # ===============================
+
+    st.subheader("Tickets no resueltos")
+
+    abiertos = df_ag[df_ag["FECHA_RESPUESTA"].isna()]
+
+    if len(abiertos) == 0:
+        st.success("No hay tickets pendientes")
+
+    else:
+
+        tabla = (
+            abiertos.groupby(["AGENTE","GRUPO"])
+            .size()
+            .reset_index(name="Tickets abiertos")
+        )
+
+        st.dataframe(tabla)
+
+        fig = px.bar(tabla, x="AGENTE", y="Tickets abiertos", color="GRUPO")
+
+        st.plotly_chart(fig, use_container_width=True)
 
