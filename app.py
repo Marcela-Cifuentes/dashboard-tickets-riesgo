@@ -277,21 +277,57 @@ tab1, tab2, tab3, tab4 = st.tabs([
 
 with tab1:
 
-    col1,col2,col3,col4 = st.columns(4)
+    # ===============================
+    # KPIs
+    # ===============================
+
+    col1, col2, col3, col4 = st.columns(4)
 
     col1.metric("Total Tickets", len(df_filtrado))
     col2.metric("Promedio días", round(df_filtrado["DIAS"].mean(),2))
     col3.metric("% Riesgo >5 días", round(df_filtrado["RIESGO_OPERATIVO"].mean()*100,2))
     col4.metric("% Demora crítica", round(df_filtrado["DEMORA_CRITICA"].mean()*100,2))
 
-    fig = px.pie(
-        df_filtrado,
-        names="ESTADO_SLA",
-        color="ESTADO_SLA",
-        color_discrete_map=SLA_COLORS
-    )
+    st.divider()
 
-    st.plotly_chart(fig, use_container_width=True)
+    # ===============================
+    # GRÁFICOS
+    # ===============================
+
+    colA, colB = st.columns(2)
+
+    # HISTOGRAMA TIEMPO RESOLUCIÓN
+    with colA:
+
+        st.subheader("Distribución de días de resolución")
+
+        fig_hist = px.histogram(
+            df_filtrado[df_filtrado["DIAS"] <= 30],
+            x="DIAS",
+            nbins=30,
+            title="Distribución de tiempo de resolución"
+        )
+
+        fig_hist.add_vline(x=3, line_dash="dash", line_color="green")
+        fig_hist.add_vline(x=5, line_dash="dash", line_color="orange")
+        fig_hist.add_vline(x=7, line_dash="dash", line_color="red")
+
+        st.plotly_chart(fig_hist, use_container_width=True)
+
+    # PIE CHART SLA
+    with colB:
+
+        st.subheader("Estado SLA")
+
+        fig_sla = px.pie(
+            df_filtrado,
+            names="ESTADO_SLA",
+            color="ESTADO_SLA",
+            color_discrete_map=SLA_COLORS,
+            title="Distribución SLA"
+        )
+
+        st.plotly_chart(fig_sla, use_container_width=True)
 
 # ===============================
 # TAB OPERACIÓN
@@ -405,7 +441,7 @@ with tab4:
 
     st.divider()
 
-    st.subheader("🔮 Predicción de riesgo de nuevo ticket")
+    st.subheader(" Predicción de riesgo de nuevo ticket")
     
     asunto = st.text_input("Asunto del ticket")
     
@@ -467,6 +503,7 @@ with tab4:
         except Exception as e:
     
             st.error(f"Error en la predicción: {e}")
+
 
 
 
