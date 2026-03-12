@@ -555,6 +555,7 @@ with tab5:
 
     st.subheader("Comparación entre bases de tickets")
 
+    # cargar ambas bases
     df1 = cargar_datos(base1)
     df2 = cargar_datos(base2)
 
