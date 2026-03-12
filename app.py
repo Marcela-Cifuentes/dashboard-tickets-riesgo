@@ -1080,4 +1080,223 @@ with tab7:
         st.plotly_chart(fig, use_container_width=True, key="tickets_abiertos")
 
 
+    # ===============================
+    # HEATMAP EXPERTISE AGENTE vs TIPO INCIDENTE
+    # ===============================
+    
+    st.subheader("🧠 Expertise por agente (Tipo de incidente)")
+    
+    # validar que existan columnas necesarias
+    if "TIPO_INCIDENTE" not in df_ag.columns:
+        st.warning("No existe la columna TIPO_INCIDENTE en el dataset.")
+    else:
+    
+        # matriz de frecuencia
+        matriz = pd.crosstab(
+            df_ag["AGENTE"],
+            df_ag["TIPO_INCIDENTE"]
+        )
+    
+        if matriz.shape[0] == 0:
+            st.info("No hay datos para construir el heatmap con los filtros actuales.")
+        else:
+    
+            fig_heat = px.imshow(
+                matriz,
+                text_auto=True,
+                aspect="auto",
+                title="Distribución de tickets por agente y tipo de incidente"
+            )
+    
+            st.plotly_chart(
+                fig_heat,
+                use_container_width=True,
+                key="heatmap_expertise_agentes"
+            )
+    
+            # ===============================
+            # TOP AGENTES POR TIPO INCIDENTE
+            # ===============================
+    
+            st.subheader("🏅 Top agente por tipo de incidente")
+    
+            top_agentes = (
+                df_ag.groupby(["TIPO_INCIDENTE","AGENTE"])
+                .size()
+                .reset_index(name="Tickets")
+                .sort_values(["TIPO_INCIDENTE","Tickets"], ascending=[True,False])
+            )
+    
+            top_agentes = top_agentes.groupby("TIPO_INCIDENTE").head(1)
+    
+            st.dataframe(
+                top_agentes,
+                use_container_width=True
+            )
 
+    # ===============================
+    # RECOMENDACIÓN DE AGENTE
+    # ===============================
+    
+    st.subheader("🤖 Recomendación automática de agente")
+    
+    if "TIPO_INCIDENTE" not in df_ag.columns:
+        st.warning("No existe la columna TIPO_INCIDENTE")
+    else:
+    
+        col1, col2 = st.columns(2)
+    
+        with col1:
+            tipo_ticket = st.selectbox(
+                "Tipo de incidente",
+                sorted(df_ag["TIPO_INCIDENTE"].dropna().unique()),
+                key="tipo_recomendacion"
+            )
+    
+        with col2:
+            grupo_ticket = st.selectbox(
+                "Grupo",
+                sorted(df_ag["GRUPO"].dropna().unique()),
+                key="grupo_recomendacion"
+            )
+    
+        # filtrar histórico
+        df_hist = df_ag[
+            (df_ag["TIPO_INCIDENTE"] == tipo_ticket) &
+            (df_ag["GRUPO"] == grupo_ticket)
+        ]
+    
+        if len(df_hist) == 0:
+    
+            st.warning("No hay histórico suficiente para recomendar agente.")
+    
+        else:
+    
+            ranking_agentes = (
+                df_hist.groupby("AGENTE")
+                .agg(
+                    Tickets=("TICKET_ID","count"),
+                    Promedio_dias=("DIAS","mean")
+                )
+                .reset_index()
+            )
+    
+            ranking_agentes = ranking_agentes.sort_values(
+                ["Promedio_dias","Tickets"],
+                ascending=[True,False]
+            )
+    
+            mejor_agente = ranking_agentes.iloc[0]
+    
+            st.success(
+                f"Agente recomendado: **{mejor_agente['AGENTE']}**"
+            )
+    
+            st.info(
+                f"Promedio resolución: {round(mejor_agente['Promedio_dias'],2)} días"
+            )
+    
+            st.dataframe(
+                ranking_agentes,
+                use_container_width=True
+            )
+
+
+
+    # ===============================
+    # 🔮 ALERTA TEMPRANA DE INCUMPLIMIENTO SLA
+    # ===============================
+    
+    st.subheader("🔮 Alerta temprana de riesgo de incumplimiento SLA")
+    
+    # Reutiliza el dataset filtrado del tab (df_ag)
+    try:
+        # Ejecutar predicción sobre el dataset actual del tab
+        df_riesgo = predecir_dataset(df_ag.copy(), modelo, vectorizer, encoder)
+    
+        # Umbral configurable
+        colu1, colu2 = st.columns([2,1])
+        with colu1:
+            umbral = st.slider(
+                "Umbral de alerta (probabilidad de riesgo)",
+                min_value=0.50, max_value=0.95, value=0.80, step=0.05,
+                key="umbral_alerta_sla"
+            )
+        with colu2:
+            st.caption("Se listan tickets con PROB_RIESGO ≥ umbral")
+    
+        # Tickets con alto riesgo
+        alto_riesgo = df_riesgo[df_riesgo["PROB_RIESGO"] >= umbral]
+    
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Tickets analizados", len(df_riesgo))
+        col2.metric("Tickets en alto riesgo", len(alto_riesgo))
+        col3.metric("% alto riesgo", round((len(alto_riesgo)/max(len(df_riesgo),1))*100,2))
+    
+        # -------------------------
+        # Gráfico distribución riesgo
+        # -------------------------
+        fig_dist = px.histogram(
+            df_riesgo,
+            x="PROB_RIESGO",
+            nbins=30,
+            title="Distribución de probabilidad de riesgo SLA"
+        )
+    
+        fig_dist.add_vline(
+            x=umbral,
+            line_dash="dash",
+            line_color="red",
+            annotation_text="Umbral alerta"
+        )
+    
+        st.plotly_chart(
+            fig_dist,
+            use_container_width=True,
+            key="dist_riesgo_sla"
+        )
+    
+        # -------------------------
+        # Tabla tickets en riesgo
+        # -------------------------
+        st.subheader("🚨 Tickets con alta probabilidad de incumplir SLA")
+    
+        if len(alto_riesgo) == 0:
+            st.success("No hay tickets que superen el umbral de alerta.")
+        else:
+            cols = [
+                c for c in [
+                    "TICKET_ID","TICKET_ASUNTO","AGENTE","GRUPO",
+                    "PRIORIDAD","DIAS","PROB_RIESGO"
+                ] if c in alto_riesgo.columns
+            ]
+    
+            st.dataframe(
+                alto_riesgo[cols].sort_values("PROB_RIESGO", ascending=False),
+                use_container_width=True
+            )
+    
+            # gráfico por agente
+            if "AGENTE" in alto_riesgo.columns:
+                riesgo_agente = (
+                    alto_riesgo.groupby("AGENTE")
+                    .size()
+                    .reset_index(name="Tickets en riesgo")
+                    .sort_values("Tickets en riesgo", ascending=False)
+                )
+    
+                fig_riesgo_ag = px.bar(
+                    riesgo_agente,
+                    x="AGENTE",
+                    y="Tickets en riesgo",
+                    title="Tickets en alto riesgo por agente"
+                )
+    
+                st.plotly_chart(
+                    fig_riesgo_ag,
+                    use_container_width=True,
+                    key="riesgo_por_agente"
+                )
+    
+    except Exception as e:
+        st.error(f"No se pudo calcular la alerta temprana: {e}")
