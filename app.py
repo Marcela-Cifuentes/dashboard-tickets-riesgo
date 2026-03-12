@@ -531,6 +531,7 @@ with tab5:
 
     if base1 == base2:
         st.warning("Selecciona dos bases diferentes para comparar")
+        st.stop()
     else:
 
         # cargar ambas bases
@@ -573,4 +574,20 @@ with tab5:
             title="Comparación de riesgo operativo"
         )
 
-        st.plotly_chart(fig_comp, use_container_width=True)
+        df_comp = pd.concat([
+            df1.assign(Base=base1),
+            df2.assign(Base=base2)
+        ])
+        
+        fig_sla_comp = px.bar(
+            df_comp.groupby(["Base","ESTADO_SLA"]).size().reset_index(name="Tickets"),
+            x="Base",
+            y="Tickets",
+            color="ESTADO_SLA",
+            barmode="stack",
+            color_discrete_map=SLA_COLORS,
+            title="Comparación de SLA entre bases"
+        )
+        
+        st.plotly_chart(fig_sla_comp, use_container_width=True)
+
