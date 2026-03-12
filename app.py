@@ -426,7 +426,7 @@ with tab3:
 
     st.plotly_chart(fig_pred, use_container_width=True)
 
-    st.subheader("🚨 Tickets críticos")
+    st.subheader(" Tickets críticos")
 
     criticos = df_filtrado[df_filtrado["DIAS"] > 7]
 
@@ -597,7 +597,7 @@ with tab5:
 
 with tab6:
 
-    st.header("👨‍💻 Analítica operativa por agentes")
+    st.header(" Analítica operativa por agentes")
 
     if "AGENTE" not in df.columns:
         st.warning("La base de datos no contiene columna AGENTE")
@@ -660,7 +660,7 @@ with tab6:
     # CARGA DE TRABAJO POR AGENTE
     # ===============================
 
-    st.subheader("📊 Carga de trabajo por agente")
+    st.subheader(" Carga de trabajo por agente")
 
     tickets_agente = (
         df_ag.groupby("AGENTE")
@@ -703,7 +703,7 @@ with tab6:
     # RANKING DESEMPEÑO
     # ===============================
 
-    st.subheader("🏆 Ranking desempeño agentes")
+    st.subheader(" Ranking desempeño agentes")
 
     ranking = df_ag.groupby("AGENTE").agg(
         Tickets=("TICKET_ID","count"),
@@ -719,7 +719,7 @@ with tab6:
     # PRODUCTIVIDAD MENSUAL
     # ===============================
 
-    st.subheader("📈 Productividad mensual por agente")
+    st.subheader(" Productividad mensual por agente")
 
     prod_mes = (
         df_ag.groupby(["MES","AGENTE"])
@@ -741,7 +741,7 @@ with tab6:
     # DETECCIÓN AGENTES SATURADOS
     # ===============================
 
-    st.subheader("🔥 Detección de agentes saturados")
+    st.subheader(" Detección de agentes saturados")
 
     carga = (
         df_ag.groupby("AGENTE")
@@ -788,7 +788,7 @@ with tab6:
     # RANKING POR AGENTE Y GRUPO
     # ===============================
 
-    st.subheader("📊 Ranking por agente y grupo")
+    st.subheader(" Ranking por agente y grupo")
 
     ranking_ag_gr = (
         df_ag.groupby(["GRUPO","AGENTE"])
@@ -807,7 +807,7 @@ with tab6:
     # TICKETS POR AGENTE Y GRUPO
     # ===============================
 
-    st.subheader("📈 Tickets por agente dentro de cada grupo")
+    st.subheader(" Tickets por agente dentro de cada grupo")
 
     fig_ag_gr = px.bar(
         ranking_ag_gr,
@@ -823,7 +823,7 @@ with tab6:
     # INCUMPLIMIENTO SLA POR GRUPO
     # ===============================
 
-    st.subheader("🚨 Incumplimiento SLA por grupo")
+    st.subheader(" Incumplimiento SLA por grupo")
 
     sla_grupo = (
         df_ag.groupby("GRUPO")["DIAS"]
@@ -844,7 +844,7 @@ with tab6:
     # TICKETS NO RESUELTOS
     # ===============================
 
-    st.subheader("⏳ Tickets no resueltos")
+    st.subheader(" Tickets no resueltos")
 
     no_resueltos = df_ag[df_ag["FECHA_RESPUESTA"].isna()]
 
@@ -871,5 +871,6 @@ with tab6:
         )
 
         st.plotly_chart(fig_abiertos, use_container_width=True)
+
 
 
