@@ -42,11 +42,17 @@ base_datos = st.sidebar.selectbox(
 # ===============================
 # CARGA DATOS
 # ===============================
+import os
 
 @st.cache_data(ttl=60)
 def cargar_datos(archivo):
 
-    df = pd.read_excel(archivo)
+    if not os.path.exists(archivo):
+
+        st.error(f"No se encontró el archivo: {archivo}")
+        return pd.DataFrame()
+
+    df = pd.read_excel(archivo, engine="openpyxl")
 
     df["CREACION"] = pd.to_datetime(df["CREACION"], errors="coerce")
     df["FECHA_RESPUESTA"] = pd.to_datetime(df["FECHA_RESPUESTA"], errors="coerce")
@@ -58,24 +64,10 @@ def cargar_datos(archivo):
     df = df[df["TIEMPO_HORAS"] >= 0]
 
     df["DIAS"] = (df["TIEMPO_HORAS"] / 24).round(2)
+
     df = df.dropna(subset=["DIAS"])
 
-    df["RIESGO_OPERATIVO"] = (df["DIAS"] > 5).astype(int)
-    df["DEMORA_CRITICA"] = (df["DIAS"] > 7).astype(int)
-
-    df["ESTADO_SLA"] = np.where(
-        df["DIAS"] <= 3,
-        "🟢 Dentro SLA",
-        np.where(df["DIAS"] <= 5, "🟡 En riesgo", "🔴 Fuera SLA")
-    )
-
-    df["TEXTO_COMPLETO"] = (
-        df["TICKET_ASUNTO"].fillna("") + " " +
-        df["TICKET_DESCRIPCION"].fillna("")
-    )
-
     return df
-
 # ===============================
 # MODELO
 # ===============================
@@ -461,4 +453,5 @@ with tab4:
         except Exception as e:
     
             st.error(f"Error en la predicción: {e}")
+
 
