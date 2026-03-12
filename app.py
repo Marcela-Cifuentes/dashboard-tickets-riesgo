@@ -521,9 +521,6 @@ with tab4:
 # ===============================
 # TAB COMPARACION 
 # ===============================
-# ===============================
-# TAB COMPARACION 
-# ===============================
 
 with tab5:
 
@@ -590,4 +587,5 @@ with tab5:
         )
         
         st.plotly_chart(fig_sla_comp, use_container_width=True)
+
 
