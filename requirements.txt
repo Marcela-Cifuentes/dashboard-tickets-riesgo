@@ -1,11 +1,10 @@
-streamlit>=1.30
+streamlit
 pandas
 numpy
 plotly
 scikit-learn
-nltk
 joblib
-openpyxl
-streamlit-autorefresh
+nltk
 scipy
-
+streamlit-autorefresh
+openpyxl
