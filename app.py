@@ -58,6 +58,7 @@ def cargar_datos(archivo):
     df = df[df["TIEMPO_HORAS"] >= 0]
 
     df["DIAS"] = (df["TIEMPO_HORAS"] / 24).round(2)
+    df = df.dropna(subset=["DIAS"])
 
     df["RIESGO_OPERATIVO"] = (df["DIAS"] > 5).astype(int)
     df["DEMORA_CRITICA"] = (df["DIAS"] > 7).astype(int)
@@ -194,11 +195,17 @@ def predecir_dataset(df, modelo, vectorizer, encoder):
 
 def detectar_anomalias(df):
 
-    iso = IsolationForest(contamination=0.02, random_state=42)
+    # eliminar valores nulos
+    df_clean = df.dropna(subset=["DIAS"]).copy()
 
-    df["ANOMALIA"] = iso.fit_predict(df[["DIAS"]])
+    iso = IsolationForest(
+        contamination=0.02,
+        random_state=42
+    )
 
-    return df
+    df_clean["ANOMALIA"] = iso.fit_predict(df_clean[["DIAS"]])
+
+    return df_clean
 
 # ===============================
 # CARGA
@@ -433,15 +440,6 @@ with tab4:
 
     st.plotly_chart(fig_cm, use_container_width=True)
 
-    st.subheader("🔮 Predicción de riesgo de nuevo ticket")
-
-    asunto = st.text_input("Asunto")
-    descripcion = st.text_area("Descripción")
-
-    prioridad = st.selectbox("Prioridad", sorted(df["PRIORIDAD"].dropna().unique()))
-    grupo = st.selectbox("Grupo", sorted(df["GRUPO"].dropna().unique()))
-    origen = st.selectbox("Origen", sorted(df["ORIGEN"].dropna().unique()))
-
     if st.button("Predecir riesgo"):
 
         try:
@@ -463,3 +461,4 @@ with tab4:
         except Exception as e:
     
             st.error(f"Error en la predicción: {e}")
+
