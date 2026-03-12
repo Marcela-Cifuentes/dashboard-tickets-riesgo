@@ -521,70 +521,56 @@ with tab4:
 # ===============================
 # TAB COMPARACION 
 # ===============================
+# ===============================
+# TAB COMPARACION 
+# ===============================
+
 with tab5:
 
     st.subheader("Comparación entre bases de tickets")
 
     if base1 == base2:
         st.warning("Selecciona dos bases diferentes para comparar")
+    else:
 
-    # cargar ambas bases
-    df1 = cargar_datos(base1)
-    df2 = cargar_datos(base2)
-    
-    comparacion = pd.DataFrame({
+        # cargar ambas bases
+        df1 = cargar_datos(base1)
+        df2 = cargar_datos(base2)
 
-        "Base": [base1, base2],
+        comparacion = pd.DataFrame({
 
-        "Total Tickets": [
-            len(df1),
-            len(df2)
-        ],
+            "Base": [base1, base2],
 
-        "Promedio días": [
-            round(df1["DIAS"].mean(),2),
-            round(df2["DIAS"].mean(),2)
-        ],
+            "Total Tickets": [
+                len(df1),
+                len(df2)
+            ],
 
-        "% Riesgo": [
-            round(df1["RIESGO_OPERATIVO"].mean()*100,2),
-            round(df2["RIESGO_OPERATIVO"].mean()*100,2)
-        ],
-        
-        "% Demora crítica": [
-            round(df1["DEMORA_CRITICA"].mean()*100,2),
-            round(df2["DEMORA_CRITICA"].mean()*100,2)
-        ]
+            "Promedio días": [
+                round(df1["DIAS"].mean(),2),
+                round(df2["DIAS"].mean(),2)
+            ],
 
-    })
+            "% Riesgo": [
+                round(df1["RIESGO_OPERATIVO"].mean()*100,2),
+                round(df2["RIESGO_OPERATIVO"].mean()*100,2)
+            ],
 
-    st.dataframe(comparacion)
+            "% Demora crítica": [
+                round(df1["DEMORA_CRITICA"].mean()*100,2),
+                round(df2["DEMORA_CRITICA"].mean()*100,2)
+            ]
 
-    fig_comp = px.bar(
-        comparacion,
-        x="Base",
-        y=["% Riesgo", "% Demora crítica"],
-        barmode="group",
-        title="Comparación de riesgo operativo"
-    )
+        })
 
-    fig_sla_comp = px.bar(
-        pd.concat([
-            df1.assign(Base=base1),
-            df2.assign(Base=base2)
-        ]).groupby(["Base","ESTADO_SLA"]).size().reset_index(name="Tickets"),
-        x="Base",
-        y="Tickets",
-        color="ESTADO_SLA",
-        barmode="stack",
-        color_discrete_map=SLA_COLORS,
-        title="Comparación de SLA entre bases"
-    )
-    
-    st.plotly_chart(fig_sla_comp, use_container_width=True)
-    
-    
+        st.dataframe(comparacion)
 
+        fig_comp = px.bar(
+            comparacion,
+            x="Base",
+            y=["% Riesgo", "% Demora crítica"],
+            barmode="group",
+            title="Comparación de riesgo operativo"
+        )
 
-
-
+        st.plotly_chart(fig_comp, use_container_width=True)
