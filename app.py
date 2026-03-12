@@ -38,13 +38,25 @@ base_datos = st.sidebar.selectbox(
         "TicketsE.xlsx"
     ]
 )
+st.sidebar.header("Comparación de bases")
 
+base1 = st.sidebar.selectbox(
+    "Base 1",
+    ["TicketsHD.xlsx", "TicketsE.xlsx"]
+)
+
+base2 = st.sidebar.selectbox(
+    "Base 2",
+    ["TicketsHD.xlsx", "TicketsE.xlsx"],
+    index=1
+)
 # ===============================
 # CARGA DATOS
 # ===============================
 @st.cache_data(ttl=60)
 def cargar_datos(archivo):
-
+    df1 = cargar_datos(base1)
+    df2 = cargar_datos(base2)
     df = pd.read_excel(archivo)
 
     df["CREACION"] = pd.to_datetime(df["CREACION"], errors="coerce")
@@ -82,6 +94,36 @@ def cargar_datos(archivo):
         df["TEXTO_COMPLETO"] = ""
 
     return df
+
+# ===============================
+# Comparacion
+# ===============================
+
+comparacion = pd.DataFrame({
+
+    "Base": [base1, base2],
+
+    "Total Tickets": [
+        len(df1),
+        len(df2)
+    ],
+
+    "Promedio días": [
+        df1["DIAS"].mean(),
+        df2["DIAS"].mean()
+    ],
+
+    "% Riesgo": [
+        df1["RIESGO_OPERATIVO"].mean()*100,
+        df2["RIESGO_OPERATIVO"].mean()*100
+    ],
+
+    "% Demora crítica": [
+        df1["DEMORA_CRITICA"].mean()*100,
+        df2["DEMORA_CRITICA"].mean()*100
+    ]
+
+})
 # ===============================
 # MODELO
 # ===============================
@@ -264,11 +306,12 @@ else:
 # TABS
 # ===============================
 
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "Resumen",
     "Operación",
     "Riesgo",
-    "Modelo"
+    "Modelo",
+    "Comparación"
 ])
 
 # ===============================
@@ -505,6 +548,52 @@ with tab4:
             st.error(f"Error en la predicción: {e}")
 
 
+# ===============================
+# TAB COMPARACION 
+# ===============================
+with tab5:
 
+    st.subheader("Comparación entre bases de tickets")
+
+    df1 = cargar_datos(base1)
+    df2 = cargar_datos(base2)
+
+    comparacion = pd.DataFrame({
+
+        "Base": [base1, base2],
+
+        "Total Tickets": [
+            len(df1),
+            len(df2)
+        ],
+
+        "Promedio días": [
+            df1["DIAS"].mean(),
+            df2["DIAS"].mean()
+        ],
+
+        "% Riesgo": [
+            df1["RIESGO_OPERATIVO"].mean()*100,
+            df2["RIESGO_OPERATIVO"].mean()*100
+        ],
+
+        "% Demora crítica": [
+            df1["DEMORA_CRITICA"].mean()*100,
+            df2["DEMORA_CRITICA"].mean()*100
+        ]
+
+    })
+
+    st.dataframe(comparacion)
+
+    fig_comp = px.bar(
+        comparacion,
+        x="Base",
+        y=["% Riesgo", "% Demora crítica"],
+        barmode="group",
+        title="Comparación de riesgo operativo"
+    )
+
+    st.plotly_chart(fig_comp, use_container_width=True)
 
 
