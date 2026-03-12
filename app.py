@@ -524,13 +524,14 @@ with tab4:
 with tab5:
 
     st.subheader("Comparación entre bases de tickets")
+
     if base1 == base2:
         st.warning("Selecciona dos bases diferentes para comparar")
 
     # cargar ambas bases
     df1 = cargar_datos(base1)
     df2 = cargar_datos(base2)
-
+    
     comparacion = pd.DataFrame({
 
         "Base": [base1, base2],
@@ -583,6 +584,7 @@ with tab5:
     st.plotly_chart(fig_sla_comp, use_container_width=True)
     
     
+
 
 
 
