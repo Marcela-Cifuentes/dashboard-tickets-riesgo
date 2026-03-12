@@ -525,7 +525,7 @@ with tab5:
 
     st.subheader("Comparación entre bases de tickets")
     if base1 == base2:
-    st.warning("Selecciona dos bases diferentes para comparar")
+        st.warning("Selecciona dos bases diferentes para comparar")
 
     # cargar ambas bases
     df1 = cargar_datos(base1)
@@ -583,5 +583,6 @@ with tab5:
     st.plotly_chart(fig_sla_comp, use_container_width=True)
     
     
+
 
 
