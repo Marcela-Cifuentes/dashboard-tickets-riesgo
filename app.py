@@ -38,18 +38,6 @@ base_datos = st.sidebar.selectbox(
         "TicketsE.xlsx"
     ]
 )
-st.sidebar.header("Comparación de bases")
-
-base1 = st.sidebar.selectbox(
-    "Base 1",
-    ["TicketsHD.xlsx", "TicketsE.xlsx"]
-)
-
-base2 = st.sidebar.selectbox(
-    "Base 2",
-    ["TicketsHD.xlsx", "TicketsE.xlsx"],
-    index=1
-)
 # ===============================
 # CARGA DATOS
 # ===============================
@@ -61,6 +49,11 @@ def cargar_datos(archivo):
     df["CREACION"] = pd.to_datetime(df["CREACION"], errors="coerce")
     df["FECHA_RESPUESTA"] = pd.to_datetime(df["FECHA_RESPUESTA"], errors="coerce")
 
+    df = df.dropna(subset=["CREACION","FECHA_RESPUESTA"])
+
+    # NUEVO → columna MES
+    df["MES"] = df["CREACION"].dt.to_period("M").astype(str)
+
     df["TIEMPO_HORAS"] = (
         df["FECHA_RESPUESTA"] - df["CREACION"]
     ).dt.total_seconds() / 3600
@@ -68,8 +61,6 @@ def cargar_datos(archivo):
     df = df[df["TIEMPO_HORAS"] >= 0]
 
     df["DIAS"] = (df["TIEMPO_HORAS"] / 24).round(2)
-
-    df = df.dropna(subset=["DIAS"])
 
     df["RIESGO_OPERATIVO"] = (df["DIAS"] > 5).astype(int)
     df["DEMORA_CRITICA"] = (df["DIAS"] > 7).astype(int)
@@ -80,46 +71,57 @@ def cargar_datos(archivo):
         np.where(df["DIAS"] <= 5, "🟡 En riesgo", "🔴 Fuera SLA")
     )
 
-    if "TICKET_ASUNTO" in df.columns and "TICKET_DESCRIPCION" in df.columns:
-
-        df["TEXTO_COMPLETO"] = (
-            df["TICKET_ASUNTO"].fillna("") + " " +
-            df["TICKET_DESCRIPCION"].fillna("")
-        )
-
-    else:
-
-        df["TEXTO_COMPLETO"] = ""
+    df["TEXTO_COMPLETO"] = (
+        df["TICKET_ASUNTO"].fillna("") + " " +
+        df["TICKET_DESCRIPCION"].fillna("")
+    )
 
     return df
 
+
+df = cargar_datos(base_datos)
 # ===============================
-# FILTRO TEMPORAL **
+# FILTRO AGENTE
 # ===============================
 
-df["MES"] = df["CREACION"].dt.to_period("M").astype(str)
+st.sidebar.header("Filtros")
 
+grupo_sel = st.sidebar.selectbox("Grupo", ["Todos"] + sorted(df["GRUPO"].dropna().unique()))
+prioridad_sel = st.sidebar.selectbox("Prioridad", ["Todos"] + sorted(df["PRIORIDAD"].dropna().unique()))
+origen_sel = st.sidebar.selectbox("Origen", ["Todos"] + sorted(df["ORIGEN"].dropna().unique()))
+
+# NUEVO → filtro MES
 mes_sel = st.sidebar.selectbox(
     "Mes",
     ["Todos"] + sorted(df["MES"].dropna().unique())
 )
 
-if mes_sel != "Todos":
-    df_filtrado = df_filtrado[df_filtrado["MES"] == mes_sel]
-
-# ===============================
-# FILTRO AGENTE
-# ===============================
-
+# NUEVO → filtro AGENTE
 if "AGENTE" in df.columns:
 
     agente_sel = st.sidebar.selectbox(
         "Agente",
         ["Todos"] + sorted(df["AGENTE"].dropna().unique())
     )
+else:
+    agente_sel = "Todos"
 
-    if agente_sel != "Todos":
-        df_filtrado = df_filtrado[df_filtrado["AGENTE"] == agente_sel]
+df_filtrado = df.copy()
+
+if grupo_sel != "Todos":
+    df_filtrado = df_filtrado[df_filtrado["GRUPO"] == grupo_sel]
+
+if prioridad_sel != "Todos":
+    df_filtrado = df_filtrado[df_filtrado["PRIORIDAD"] == prioridad_sel]
+
+if origen_sel != "Todos":
+    df_filtrado = df_filtrado[df_filtrado["ORIGEN"] == origen_sel]
+
+if mes_sel != "Todos":
+    df_filtrado = df_filtrado[df_filtrado["MES"] == mes_sel]
+
+if agente_sel != "Todos":
+    df_filtrado = df_filtrado[df_filtrado["AGENTE"] == agente_sel]
 
 # ===============================
 # MODELO
@@ -415,32 +417,38 @@ with tab2:
 
     st.plotly_chart(fig_inc, use_container_width=True)
 
-    st.subheader("Atención por agente")
-    
+     # NUEVO → Atención por agente
+
     if "AGENTE" in df_filtrado.columns:
-    
+
+        st.subheader("Atención por agente")
+
         agentes = (
             df_filtrado.groupby("AGENTE")
             .size()
             .reset_index(name="Tickets")
             .sort_values("Tickets", ascending=False)
         )
-    
+
         fig_agentes = px.bar(
             agentes,
             x="AGENTE",
             y="Tickets",
             title="Tickets atendidos por agente"
         )
-    
+
         st.plotly_chart(fig_agentes, use_container_width=True)
-        tabla_agentes = df_filtrado.groupby("AGENTE").agg(
+
+        st.subheader("Desempeño por agente")
+
+        ranking = df_filtrado.groupby("AGENTE").agg(
             Tickets=("TICKET_ID","count"),
             Promedio_dias=("DIAS","mean"),
             Riesgo=("RIESGO_OPERATIVO","mean")
         ).reset_index()
-        
-        st.dataframe(tabla_agentes)
+
+        st.dataframe(ranking)
+
 
 
 # ===============================
@@ -639,6 +647,7 @@ with tab5:
         )
         
         st.plotly_chart(fig_sla_comp, use_container_width=True)
+
 
 
 
