@@ -1086,14 +1086,18 @@ with tab7:
     st.subheader(" Tickets por agente dentro de cada grupo")
 
     fig_ag_gr = px.bar(
-        ranking_ag_gr,
+        ranking_gr,
         x="AGENTE",
         y="Tickets",
         color="GRUPO",
         title="Tickets por agente y grupo"
     )
-
-    st.plotly_chart(fig_ag_gr, use_container_width=True)
+    
+    st.plotly_chart(
+        fig_ag_gr,
+        use_container_width=True,
+        key="tickets_agente_grupo"
+    )
 
 
 
@@ -1317,6 +1321,7 @@ with tab7:
     
     except Exception as e:
         st.error(f"No se pudo calcular la alerta temprana: {e}")
+
 
 
 
