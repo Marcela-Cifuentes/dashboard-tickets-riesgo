@@ -896,19 +896,22 @@ with tab7:
     with col1:
         mes_sel = st.selectbox(
             "Mes",
-            ["Todos"] + sorted(df_ag["MES"].dropna().unique())
+            ["Todos"] + sorted(df_ag["MES"].dropna().unique()),
+            key="mes_agentes"
         )
 
     with col2:
         agente_sel = st.selectbox(
             "Agente",
-            ["Todos"] + sorted(df_ag["AGENTE"].dropna().unique())
+            ["Todos"] + sorted(df_ag["AGENTE"].dropna().unique()),
+            key="agente_agentes"
         )
 
     with col3:
         grupo_sel = st.selectbox(
             "Grupo",
-            ["Todos"] + sorted(df_ag["GRUPO"].dropna().unique())
+            ["Todos"] + sorted(df_ag["GRUPO"].dropna().unique()),
+            key="grupo_agentes"
         )
 
     if mes_sel != "Todos":
@@ -1076,4 +1079,5 @@ with tab7:
         fig = px.bar(tabla, x="AGENTE", y="Tickets abiertos", color="GRUPO")
 
         st.plotly_chart(fig, use_container_width=True)
+
 
