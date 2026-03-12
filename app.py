@@ -14,7 +14,7 @@ from streamlit_autorefresh import st_autorefresh
 
 st.set_page_config(page_title="Sistema Inteligente de Tickets", layout="wide")
 
-st.title("Sistema Inteligente de Monitoreo HeplDesk")
+st.title("Sistema Inteligente de Monitoreo HelpDesk")
 st.caption("Analítica predictiva y monitoreo de riesgo operativo")
 
 st_autorefresh(interval=6000000, key="refresh")
@@ -524,6 +524,8 @@ with tab4:
 with tab5:
 
     st.subheader("Comparación entre bases de tickets")
+    if base1 == base2:
+    st.warning("Selecciona dos bases diferentes para comparar")
 
     # cargar ambas bases
     df1 = cargar_datos(base1)
@@ -539,18 +541,18 @@ with tab5:
         ],
 
         "Promedio días": [
-            df1["DIAS"].mean(),
-            df2["DIAS"].mean()
+            round(df1["DIAS"].mean(),2),
+            round(df2["DIAS"].mean(),2)
         ],
 
         "% Riesgo": [
-            df1["RIESGO_OPERATIVO"].mean()*100,
-            df2["RIESGO_OPERATIVO"].mean()*100
+            round(df1["RIESGO_OPERATIVO"].mean()*100,2),
+            round(df2["RIESGO_OPERATIVO"].mean()*100,2)
         ],
-
+        
         "% Demora crítica": [
-            df1["DEMORA_CRITICA"].mean()*100,
-            df2["DEMORA_CRITICA"].mean()*100
+            round(df1["DEMORA_CRITICA"].mean()*100,2),
+            round(df2["DEMORA_CRITICA"].mean()*100,2)
         ]
 
     })
@@ -565,7 +567,21 @@ with tab5:
         title="Comparación de riesgo operativo"
     )
 
-    st.plotly_chart(fig_comp, use_container_width=True)
-
+    fig_sla_comp = px.bar(
+        pd.concat([
+            df1.assign(Base=base1),
+            df2.assign(Base=base2)
+        ]).groupby(["Base","ESTADO_SLA"]).size().reset_index(name="Tickets"),
+        x="Base",
+        y="Tickets",
+        color="ESTADO_SLA",
+        barmode="stack",
+        color_discrete_map=SLA_COLORS,
+        title="Comparación de SLA entre bases"
+    )
+    
+    st.plotly_chart(fig_sla_comp, use_container_width=True)
+    
+    
 
 
