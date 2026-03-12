@@ -940,7 +940,7 @@ with tab7:
 
     fig = px.bar(carga, x="AGENTE", y="Tickets", title="Tickets por agente")
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, key="carga_agentes")
 
     # ===============================
     # SLA POR AGENTE
@@ -956,8 +956,7 @@ with tab7:
 
     fig = px.bar(sla, x="AGENTE", y="SLA_%")
 
-    st.plotly_chart(fig, use_container_width=True)
-
+    st.plotly_chart(fig, use_container_width=True, key="sla_agentes")
     # ===============================
     # RANKING
     # ===============================
@@ -988,7 +987,7 @@ with tab7:
 
     fig = px.line(prod, x="MES", y="Tickets", color="AGENTE", markers=True)
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, key="productividad_agentes")
 
     # ===============================
     # AGENTES SATURADOS
@@ -1006,7 +1005,7 @@ with tab7:
 
     fig = px.bar(carga, x="AGENTE", y="Tickets", color="Estado")
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, key="saturacion_agentes")
 
     # ===============================
     # AGENTE → GRUPO
@@ -1053,7 +1052,7 @@ with tab7:
 
     fig = px.bar(sla_grupo, x="GRUPO", y="Incumplimiento_%")
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, key="sla_grupo")
 
     # ===============================
     # TICKETS ABIERTOS
@@ -1078,6 +1077,7 @@ with tab7:
 
         fig = px.bar(tabla, x="AGENTE", y="Tickets abiertos", color="GRUPO")
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, key="tickets_abiertos")
+
 
 
