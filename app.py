@@ -14,13 +14,11 @@ from streamlit_autorefresh import st_autorefresh
 
 st.set_page_config(page_title="Sistema Inteligente de Tickets", layout="wide")
 
-st.title(" Sistema Inteligente de Monitoreo Help Desk")
+st.title("Sistema Inteligente de Monitoreo HeplDesk")
 st.caption("Analítica predictiva y monitoreo de riesgo operativo")
 
-# refresco automático cada minuto
-st_autorefresh(interval=60000, key="refresh")
+st_autorefresh(interval=6000000, key="refresh")
 
-# colores SLA
 SLA_COLORS = {
     "🟢 Dentro SLA": "#2ecc71",
     "🟡 En riesgo": "#f1c40f",
@@ -28,18 +26,34 @@ SLA_COLORS = {
 }
 
 # ===============================
+# SELECCIÓN BASE DATOS
+# ===============================
+
+st.sidebar.header("Fuente de datos")
+
+base_datos = st.sidebar.selectbox(
+    "Seleccionar base",
+    [
+        "TicketsHD.xlsx",
+        "TicketsE.xlsx"
+    ]
+)
+
+# ===============================
 # CARGA DATOS
 # ===============================
 
 @st.cache_data(ttl=60)
-def cargar_datos():
+def cargar_datos(archivo):
 
-    df = pd.read_excel("TicketsHD.xlsx")
+    df = pd.read_excel(archivo)
 
     df["CREACION"] = pd.to_datetime(df["CREACION"], errors="coerce")
     df["FECHA_RESPUESTA"] = pd.to_datetime(df["FECHA_RESPUESTA"], errors="coerce")
 
-    df["TIEMPO_HORAS"] = (df["FECHA_RESPUESTA"] - df["CREACION"]).dt.total_seconds() / 3600
+    df["TIEMPO_HORAS"] = (
+        df["FECHA_RESPUESTA"] - df["CREACION"]
+    ).dt.total_seconds() / 3600
 
     df = df[df["TIEMPO_HORAS"] >= 0]
 
@@ -49,7 +63,8 @@ def cargar_datos():
     df["DEMORA_CRITICA"] = (df["DIAS"] > 7).astype(int)
 
     df["ESTADO_SLA"] = np.where(
-        df["DIAS"] <= 3, "🟢 Dentro SLA",
+        df["DIAS"] <= 3,
+        "🟢 Dentro SLA",
         np.where(df["DIAS"] <= 5, "🟡 En riesgo", "🔴 Fuera SLA")
     )
 
@@ -59,7 +74,6 @@ def cargar_datos():
     )
 
     return df
-
 
 # ===============================
 # MODELO
@@ -73,7 +87,6 @@ def cargar_modelo():
     encoder = joblib.load("encoder.pkl")
 
     return modelo, vectorizer, encoder
-
 
 # ===============================
 # LIMPIEZA TEXTO
@@ -98,7 +111,6 @@ def limpiar_texto(texto):
 
     return " ".join(palabras)
 
-
 # ===============================
 # CLASIFICADOR INCIDENTES
 # ===============================
@@ -121,9 +133,8 @@ def clasificar_incidente(texto):
 
     return "Otro"
 
-
 # ===============================
-# PREDICCION INDIVIDUAL
+# PREDICCION
 # ===============================
 
 def predecir_riesgo(modelo, vectorizer, encoder, asunto, descripcion, prioridad, grupo, origen):
@@ -155,7 +166,6 @@ def predecir_riesgo(modelo, vectorizer, encoder, asunto, descripcion, prioridad,
 
     return proba, nivel
 
-
 # ===============================
 # PREDICCION MASIVA
 # ===============================
@@ -178,7 +188,6 @@ def predecir_dataset(df, modelo, vectorizer, encoder):
 
     return df
 
-
 # ===============================
 # ANOMALIAS
 # ===============================
@@ -191,12 +200,12 @@ def detectar_anomalias(df):
 
     return df
 
-
 # ===============================
 # CARGA
 # ===============================
 
-df = cargar_datos()
+df = cargar_datos(base_datos)
+
 modelo, vectorizer, encoder = cargar_modelo()
 
 df["TIPO_INCIDENTE"] = df["TEXTO_COMPLETO"].apply(clasificar_incidente)
@@ -238,18 +247,16 @@ elif len(tickets_riesgo) > 0:
 else:
     st.sidebar.success("🟢 Operación estable")
 
-
 # ===============================
 # TABS
 # ===============================
 
 tab1, tab2, tab3, tab4 = st.tabs([
-    " Resumen",
-    " Operación",
-    " Riesgo",
-    " Modelo"
+    "Resumen",
+    "Operación",
+    "Riesgo",
+    "Modelo"
 ])
-
 
 # ===============================
 # TAB RESUMEN
@@ -264,24 +271,17 @@ with tab1:
     col3.metric("% Riesgo >5 días", round(df_filtrado["RIESGO_OPERATIVO"].mean()*100,2))
     col4.metric("% Demora crítica", round(df_filtrado["DEMORA_CRITICA"].mean()*100,2))
 
-    st.divider()
-
-    fig = px.histogram(df_filtrado[df_filtrado["DIAS"]<=30], x="DIAS", nbins=30)
-
-    st.plotly_chart(fig, use_container_width=True)
-
-    fig_sla = px.pie(
+    fig = px.pie(
         df_filtrado,
         names="ESTADO_SLA",
         color="ESTADO_SLA",
         color_discrete_map=SLA_COLORS
     )
 
-    st.plotly_chart(fig_sla, use_container_width=True)
-
+    st.plotly_chart(fig, use_container_width=True)
 
 # ===============================
-# TAB OPERACION
+# TAB OPERACIÓN
 # ===============================
 
 with tab2:
@@ -363,7 +363,7 @@ with tab3:
 
     st.plotly_chart(fig_pred, use_container_width=True)
 
-    st.subheader(" Tickets críticos")
+    st.subheader("🚨 Tickets críticos")
 
     criticos = df_filtrado[df_filtrado["DIAS"] > 7]
 
@@ -392,8 +392,8 @@ with tab4:
 
     st.divider()
 
-    st.subheader(" Predicción de riesgo de nuevo ticket")
-
+    st.subheader("🔮 Predicción de riesgo de nuevo ticket")
+    
     asunto = st.text_input("Asunto del ticket")
     
     descripcion = st.text_area("Descripción")
@@ -412,23 +412,7 @@ with tab4:
         "Origen",
         sorted(df["ORIGEN"].dropna().unique())
     )
-    
-    if st.button("Predecir riesgo"):
-    
-        proba, nivel = predecir_riesgo(
-            modelo,
-            vectorizer,
-            encoder,
-            asunto,
-            descripcion,
-            prioridad,
-            grupo,
-            origen
-        )
 
-        st.success(f"Probabilidad de riesgo: {round(proba,3)}")
-        st.info(f"Nivel de riesgo: {nivel}")
-    
     df_pred = predecir_dataset(df_filtrado.copy(), modelo, vectorizer, encoder)
 
     y_true = df_pred["RIESGO_OPERATIVO"]
@@ -445,15 +429,37 @@ with tab4:
 
     cm = confusion_matrix(y_true, y_pred)
 
-    cm_df = pd.DataFrame(cm)
-
-    fig_cm = px.imshow(cm_df, text_auto=True)
+    fig_cm = px.imshow(cm, text_auto=True)
 
     st.plotly_chart(fig_cm, use_container_width=True)
 
+    st.subheader("🔮 Predicción de riesgo de nuevo ticket")
 
+    asunto = st.text_input("Asunto")
+    descripcion = st.text_area("Descripción")
 
+    prioridad = st.selectbox("Prioridad", sorted(df["PRIORIDAD"].dropna().unique()))
+    grupo = st.selectbox("Grupo", sorted(df["GRUPO"].dropna().unique()))
+    origen = st.selectbox("Origen", sorted(df["ORIGEN"].dropna().unique()))
 
+    if st.button("Predecir riesgo"):
 
+        try:
 
-
+            proba, nivel = predecir_riesgo(
+                modelo,
+                vectorizer,
+                encoder,
+                asunto,
+                descripcion,
+                prioridad,
+                grupo,
+                origen
+            )
+    
+            st.success(f"Probabilidad de riesgo: {round(proba,3)}")
+            st.info(f"Nivel de riesgo: {nivel}")
+    
+        except Exception as e:
+    
+            st.error(f"Error en la predicción: {e}")
