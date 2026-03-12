@@ -276,12 +276,13 @@ else:
 # TABS
 # ===============================
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "Resumen",
     "Operación",
     "Riesgo",
     "Modelo",
-    "Comparación"
+    "Comparación",
+    "Agentes"
 ])
 
 # ===============================
@@ -586,5 +587,79 @@ with tab5:
         
         st.plotly_chart(fig_sla_comp, use_container_width=True)
 
+# ===============================
+# TAB AGENTES
+# ===============================
+
+with tab6:
+
+    st.subheader("Análisis de atención por agente")
+
+    if "AGENTE" not in df.columns:
+        st.warning("La base de datos no contiene columna AGENTE")
+        st.stop()
+
+    # -------------------------
+    # filtro temporal por mes
+    # -------------------------
+
+    df_agentes = df.copy()
+
+    df_agentes["MES"] = df_agentes["CREACION"].dt.to_period("M").astype(str)
+
+    mes_sel = st.selectbox(
+        "Seleccionar mes",
+        ["Todos"] + sorted(df_agentes["MES"].dropna().unique())
+    )
+
+    if mes_sel != "Todos":
+        df_agentes = df_agentes[df_agentes["MES"] == mes_sel]
+
+    # -------------------------
+    # tickets por agente
+    # -------------------------
+
+    agentes = (
+        df_agentes.groupby("AGENTE")
+        .size()
+        .reset_index(name="Tickets")
+        .sort_values("Tickets", ascending=False)
+    )
+
+    fig_agentes = px.bar(
+        agentes,
+        x="AGENTE",
+        y="Tickets",
+        title="Tickets atendidos por agente"
+    )
+
+    st.plotly_chart(fig_agentes, use_container_width=True)
+
+    # -------------------------
+    # desempeño agentes
+    # -------------------------
+
+    st.subheader("Desempeño por agente")
+
+    ranking = df_agentes.groupby("AGENTE").agg(
+        Tickets=("TICKET_ID","count"),
+        Promedio_dias=("DIAS","mean"),
+        Riesgo=("RIESGO_OPERATIVO","mean")
+    ).reset_index()
+
+    st.dataframe(ranking)
+
+    # -------------------------
+    # boxplot tiempo resolución
+    # -------------------------
+
+    fig_box = px.box(
+        df_agentes,
+        x="AGENTE",
+        y="DIAS",
+        title="Distribución de tiempos de resolución por agente"
+    )
+
+    st.plotly_chart(fig_box, use_container_width=True)
 
 
