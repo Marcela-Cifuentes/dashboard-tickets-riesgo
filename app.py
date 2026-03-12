@@ -1084,7 +1084,7 @@ with tab7:
     # HEATMAP EXPERTISE AGENTE vs TIPO INCIDENTE
     # ===============================
     
-    st.subheader("🧠 Expertise por agente (Tipo de incidente)")
+    st.subheader(" Expertise por agente (Tipo de incidente)")
     
     # validar que existan columnas necesarias
     if "TIPO_INCIDENTE" not in df_ag.columns:
@@ -1138,7 +1138,7 @@ with tab7:
     # RECOMENDACIÓN DE AGENTE
     # ===============================
     
-    st.subheader("🤖 Recomendación automática de agente")
+    st.subheader(" Recomendación automática de agente")
     
     if "TIPO_INCIDENTE" not in df_ag.columns:
         st.warning("No existe la columna TIPO_INCIDENTE")
@@ -1204,10 +1204,10 @@ with tab7:
 
 
     # ===============================
-    # 🔮 ALERTA TEMPRANA DE INCUMPLIMIENTO SLA
+    # ALERTA TEMPRANA DE INCUMPLIMIENTO SLA
     # ===============================
     
-    st.subheader("🔮 Alerta temprana de riesgo de incumplimiento SLA")
+    st.subheader("Alerta temprana de riesgo de incumplimiento SLA")
     
     # Reutiliza el dataset filtrado del tab (df_ag)
     try:
@@ -1259,7 +1259,7 @@ with tab7:
         # -------------------------
         # Tabla tickets en riesgo
         # -------------------------
-        st.subheader("🚨 Tickets con alta probabilidad de incumplir SLA")
+        st.subheader(" Tickets con alta probabilidad de incumplir SLA")
     
         if len(alto_riesgo) == 0:
             st.success("No hay tickets que superen el umbral de alerta.")
@@ -1300,3 +1300,4 @@ with tab7:
     
     except Exception as e:
         st.error(f"No se pudo calcular la alerta temprana: {e}")
+
