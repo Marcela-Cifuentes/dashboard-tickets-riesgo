@@ -924,7 +924,7 @@ with tab7:
         df_ag = df_ag[df_ag["GRUPO"] == grupo_sel]
 
     st.divider()
-"""
+
     # ===============================
     # CARGA DE TRABAJO
     # ===============================
@@ -972,7 +972,7 @@ with tab7:
     ranking = ranking.sort_values("SLA", ascending=False)
 
     st.dataframe(ranking)
-"""
+
     # ===============================
     # PRODUCTIVIDAD MENSUAL
     # ===============================
@@ -1300,6 +1300,7 @@ with tab7:
     
     except Exception as e:
         st.error(f"No se pudo calcular la alerta temprana: {e}")
+
 
 
 
