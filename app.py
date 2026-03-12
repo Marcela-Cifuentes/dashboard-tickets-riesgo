@@ -475,26 +475,6 @@ with tab4:
         sorted(df["ORIGEN"].dropna().unique())
     )
 
-    df_pred = predecir_dataset(df_filtrado.copy(), modelo, vectorizer, encoder)
-
-    y_true = df_pred["RIESGO_OPERATIVO"]
-    y_score = df_pred["PROB_RIESGO"]
-
-    fpr, tpr, _ = roc_curve(y_true, y_score)
-    roc_auc = auc(fpr, tpr)
-
-    fig_roc = px.line(x=fpr, y=tpr, title=f"Curva ROC (AUC={roc_auc:.2f})")
-
-    st.plotly_chart(fig_roc, use_container_width=True)
-
-    y_pred = (df_pred["PROB_RIESGO"] > 0.5).astype(int)
-
-    cm = confusion_matrix(y_true, y_pred)
-
-    fig_cm = px.imshow(cm, text_auto=True)
-
-    st.plotly_chart(fig_cm, use_container_width=True)
-
     if st.button("Predecir riesgo"):
 
         try:
@@ -517,7 +497,25 @@ with tab4:
     
             st.error(f"Error en la predicción: {e}")
 
+    df_pred = predecir_dataset(df_filtrado.copy(), modelo, vectorizer, encoder)
 
+    y_true = df_pred["RIESGO_OPERATIVO"]
+    y_score = df_pred["PROB_RIESGO"]
+
+    fpr, tpr, _ = roc_curve(y_true, y_score)
+    roc_auc = auc(fpr, tpr)
+
+    fig_roc = px.line(x=fpr, y=tpr, title=f"Curva ROC (AUC={roc_auc:.2f})")
+
+    st.plotly_chart(fig_roc, use_container_width=True)
+
+    y_pred = (df_pred["PROB_RIESGO"] > 0.5).astype(int)
+
+    cm = confusion_matrix(y_true, y_pred)
+
+    fig_cm = px.imshow(cm, text_auto=True)
+
+    st.plotly_chart(fig_cm, use_container_width=True)
 # ===============================
 # TAB COMPARACION 
 # ===============================
@@ -587,5 +585,6 @@ with tab5:
         )
         
         st.plotly_chart(fig_sla_comp, use_container_width=True)
+
 
 
