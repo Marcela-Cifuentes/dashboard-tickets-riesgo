@@ -93,6 +93,33 @@ def cargar_datos(archivo):
 
     return df
 
+# ===============================
+# FILTRO TEMPORAL **
+# ===============================
+
+df["MES"] = df["CREACION"].dt.to_period("M").astype(str)
+
+mes_sel = st.sidebar.selectbox(
+    "Mes",
+    ["Todos"] + sorted(df["MES"].dropna().unique())
+)
+
+if mes_sel != "Todos":
+    df_filtrado = df_filtrado[df_filtrado["MES"] == mes_sel]
+
+# ===============================
+# FILTRO AGENTE
+# ===============================
+
+if "AGENTE" in df.columns:
+
+    agente_sel = st.sidebar.selectbox(
+        "Agente",
+        ["Todos"] + sorted(df["AGENTE"].dropna().unique())
+    )
+
+    if agente_sel != "Todos":
+        df_filtrado = df_filtrado[df_filtrado["AGENTE"] == agente_sel]
 
 # ===============================
 # MODELO
@@ -388,6 +415,33 @@ with tab2:
 
     st.plotly_chart(fig_inc, use_container_width=True)
 
+    st.subheader("Atención por agente")
+    
+    if "AGENTE" in df_filtrado.columns:
+    
+        agentes = (
+            df_filtrado.groupby("AGENTE")
+            .size()
+            .reset_index(name="Tickets")
+            .sort_values("Tickets", ascending=False)
+        )
+    
+        fig_agentes = px.bar(
+            agentes,
+            x="AGENTE",
+            y="Tickets",
+            title="Tickets atendidos por agente"
+        )
+    
+        st.plotly_chart(fig_agentes, use_container_width=True)
+        tabla_agentes = df_filtrado.groupby("AGENTE").agg(
+            Tickets=("TICKET_ID","count"),
+            Promedio_dias=("DIAS","mean"),
+            Riesgo=("RIESGO_OPERATIVO","mean")
+        ).reset_index()
+        
+        st.dataframe(tabla_agentes)
+
 
 # ===============================
 # TAB RIESGO
@@ -585,6 +639,7 @@ with tab5:
         )
         
         st.plotly_chart(fig_sla_comp, use_container_width=True)
+
 
 
 
