@@ -924,7 +924,7 @@ with tab7:
         df_ag = df_ag[df_ag["GRUPO"] == grupo_sel]
 
     st.divider()
-
+"""
     # ===============================
     # CARGA DE TRABAJO
     # ===============================
@@ -941,7 +941,7 @@ with tab7:
     fig = px.bar(carga, x="AGENTE", y="Tickets", title="Tickets por agente")
 
     st.plotly_chart(fig, use_container_width=True, key="carga_agentes")
-"""
+
     # ===============================
     # SLA POR AGENTE
     # ===============================
@@ -1300,5 +1300,6 @@ with tab7:
     
     except Exception as e:
         st.error(f"No se pudo calcular la alerta temprana: {e}")
+
 
 
