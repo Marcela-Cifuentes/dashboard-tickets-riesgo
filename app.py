@@ -341,7 +341,7 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 with tab1:
 
     # ===============================
-    # KPIs
+    # KPIs PRINCIPALES
     # ===============================
 
     col1, col2, col3, col4 = st.columns(4)
@@ -354,7 +354,56 @@ with tab1:
     st.divider()
 
     # ===============================
-    # GRÁFICOS
+    # KPIs OPERATIVOS
+    # ===============================
+
+    hoy = pd.Timestamp.today().normalize()
+
+    tickets_hoy = df_filtrado[
+        df_filtrado["CREACION"].dt.normalize() == hoy
+    ]
+
+    backlog = df_filtrado[
+        df_filtrado["TICKET_ESTADO"].isin(["Sin revisar","En Proceso","Escalado"])
+    ]
+
+    resueltos = df_filtrado[
+        df_filtrado["TICKET_ESTADO"] == "Resuelto"
+    ]
+
+    mediana_resolucion = df_filtrado["DIAS"].median()
+
+    ticket_mas_antiguo = backlog["DIAS"].max() if len(backlog) > 0 else 0
+
+    tasa_resolucion = (
+        (len(resueltos) / len(df_filtrado)) * 100
+        if len(df_filtrado) > 0 else 0
+    )
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    col1.metric("Tickets creados hoy", len(tickets_hoy))
+    col2.metric("Backlog actual", len(backlog))
+    col3.metric("Mediana resolución (días)", round(mediana_resolucion,2))
+    col4.metric("Ticket abierto más antiguo", round(ticket_mas_antiguo,2))
+
+    st.metric("Tasa de resolución", f"{round(tasa_resolucion,2)}%")
+
+    # ===============================
+    # SEMÁFORO OPERATIVO
+    # ===============================
+
+    if len(backlog) > 200:
+        st.error("🔴 Operación saturada")
+    elif len(backlog) > 100:
+        st.warning("🟡 Operación en riesgo")
+    else:
+        st.success("🟢 Operación estable")
+
+    st.divider()
+
+    # ===============================
+    # GRÁFICOS PRINCIPALES
     # ===============================
 
     colA, colB = st.columns(2)
@@ -392,6 +441,12 @@ with tab1:
 
         st.plotly_chart(fig_sla, use_container_width=True)
 
+    st.divider()
+
+    # ===============================
+    # DISTRIBUCIÓN POR GRUPO
+    # ===============================
+
     st.subheader("Distribución de tickets por grupo")
 
     tickets_grupo = (
@@ -400,33 +455,39 @@ with tab1:
         .reset_index(name="Tickets")
         .sort_values("Tickets", ascending=False)
     )
-    
+
     fig_grupo = px.bar(
         tickets_grupo,
         x="GRUPO",
         y="Tickets",
         title="Volumen de tickets por grupo"
     )
-    
+
     st.plotly_chart(fig_grupo, use_container_width=True)
 
+    # ===============================
+    # TENDENCIA SEMANAL
+    # ===============================
 
-    st.subheader("Riesgo SLA por grupo")
+    st.subheader("Tendencia semanal de tickets")
 
-    riesgo_grupo = (
-        df_filtrado.groupby("GRUPO")["RIESGO_OPERATIVO"]
-        .mean()
-        .reset_index()
+    df_filtrado["SEMANA"] = df_filtrado["CREACION"].dt.to_period("W").astype(str)
+
+    tickets_semana = (
+        df_filtrado.groupby("SEMANA")
+        .size()
+        .reset_index(name="Tickets")
     )
-    
-    fig_riesgo_grupo = px.bar(
-        riesgo_grupo,
-        x="GRUPO",
-        y="RIESGO_OPERATIVO",
-        title="Porcentaje de tickets en riesgo por grupo"
+
+    fig_semana = px.line(
+        tickets_semana,
+        x="SEMANA",
+        y="Tickets",
+        markers=True,
+        title="Evolución semanal de tickets"
     )
-    
-    st.plotly_chart(fig_riesgo_grupo, use_container_width=True)
+
+    st.plotly_chart(fig_semana, use_container_width=True)
 
 # ===============================
 # TAB OPERACIÓN
@@ -1361,6 +1422,7 @@ with tab6:
     
     except Exception as e:
         st.error(f"No se pudo calcular la alerta temprana: {e}")
+
 
 
 
