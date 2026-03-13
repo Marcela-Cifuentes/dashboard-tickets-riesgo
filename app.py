@@ -26,6 +26,12 @@ SLA_COLORS = {
     "🔴 Fuera SLA": "#e74c3c"
 }
 
+SENTIMENT_COLORS = {
+    "Negativo": "#e74c3c",
+    "Neutro": "#95a5a6",
+    "Positivo": "#2ecc71"
+}
+
 # ===============================
 # SELECCIÓN BASE DATOS
 # ===============================
@@ -1477,7 +1483,8 @@ with tab7:
     fig_sent = px.pie(
         df_filtrado,
         names="SENTIMIENTO",
-        title="Distribución de sentimiento en tickets"
+        title="Distribución de sentimiento en tickets",
+        color_discrete_map=SENTIMENT_COLORS
     )
 
     st.plotly_chart(fig_sent, use_container_width=True)
@@ -1502,7 +1509,8 @@ with tab7:
         y="Tickets",
         color="SENTIMIENTO",
         barmode="stack",
-        title="Distribución de sentimiento por grupo"
+        title="Distribución de sentimiento por grupo",
+        color_discrete_map=SENTIMENT_COLORS
     )
 
     st.plotly_chart(fig_grupo, use_container_width=True)
@@ -1561,6 +1569,7 @@ with tab7:
             negativos[cols],
             use_container_width=True
         )
+
 
 
 
