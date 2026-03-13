@@ -859,6 +859,12 @@ with tab6:
     # CLASIFICACIÓN OPERATIVA
     # ===============================
     
+    # crear dataset de tickets abiertos
+    abiertos = df_ag[
+        df_ag["TICKET_ESTADO"].isin(["Sin revisar", "En Proceso", "Escalado"])
+    ].copy()
+    
+    # clasificar estado operativo
     abiertos["ESTADO_OPERATIVO"] = np.where(
         abiertos["TICKET_ESTADO"] == "Sin revisar",
         "🔴 Sin revisar",
@@ -880,7 +886,7 @@ with tab6:
         # ===============================
     
         tabla = (
-            abiertos.groupby(["AGENTE","GRUPO"])
+            abiertos.groupby(["AGENTE", "GRUPO"])
             .size()
             .reset_index(name="Tickets abiertos")
         )
@@ -1319,6 +1325,7 @@ with tab6:
     
     except Exception as e:
         st.error(f"No se pudo calcular la alerta temprana: {e}")
+
 
 
 
