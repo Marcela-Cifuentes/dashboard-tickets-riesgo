@@ -293,7 +293,7 @@ def analizar_sentimiento(texto, modelo):
         return "Negativo"
     else:
         return "Neutro"
-df["URGENCIA"] = df["TEXTO_COMPLETO"].apply(detectar_urgencia)
+
 # ===============================
 # DETECCIÓN DE URGENCIA / FRUSTRACIÓN
 # ===============================
@@ -1645,6 +1645,7 @@ with tab7:
     
     
     
+
 
 
 
