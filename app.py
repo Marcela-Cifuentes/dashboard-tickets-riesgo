@@ -875,33 +875,33 @@ with tab6:
     
         st.plotly_chart(fig_estado, use_container_width=True, key="estado_operativo")
 
-    st.plotly_chart(fig_estado, use_container_width=True, key="estado_operativo")
-
-    # ===============================
-    # BACKLOG POR GRUPO
-    # ===============================
+        
     
-    st.subheader("Backlog de tickets abiertos por grupo")
-    
-    backlog = (
-        abiertos.groupby(["GRUPO","ESTADO_OPERATIVO"])
-        .size()
-        .reset_index(name="Tickets")
-    )
-    
-    fig_backlog = px.bar(
-        backlog,
-        x="GRUPO",
-        y="Tickets",
-        color="ESTADO_OPERATIVO",
-        title="Distribución de tickets abiertos por grupo"
-    )
-    
-    st.plotly_chart(
-        fig_backlog,
-        use_container_width=True,
-        key="backlog_grupo"
-    )
+        # ===============================
+        # BACKLOG POR GRUPO
+        # ===============================
+        
+        st.subheader("Backlog de tickets abiertos por grupo")
+        
+        backlog = (
+            abiertos.groupby(["GRUPO","ESTADO_OPERATIVO"])
+            .size()
+            .reset_index(name="Tickets")
+        )
+        
+        fig_backlog = px.bar(
+            backlog,
+            x="GRUPO",
+            y="Tickets",
+            color="ESTADO_OPERATIVO",
+            title="Distribución de tickets abiertos por grupo"
+        )
+        
+        st.plotly_chart(
+            fig_backlog,
+            use_container_width=True,
+            key="backlog_grupo"
+        )
 
     # ===============================
     # MEJORA PRO: KPIs + RANKING + RIESGO SLA (tickets abiertos)
@@ -1223,6 +1223,7 @@ with tab6:
     
     except Exception as e:
         st.error(f"No se pudo calcular la alerta temprana: {e}")
+
 
 
 
