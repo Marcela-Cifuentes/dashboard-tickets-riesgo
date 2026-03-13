@@ -28,8 +28,9 @@ SLA_COLORS = {
 # ===============================
 # SELECCIÓN BASE DATOS
 # ===============================
-if st.sidebar.button("Actualizar datos"):
+if st.sidebar.button("🔄 Actualizar datos"):
     st.cache_data.clear()
+    st.experimental_rerun()
 URLS_BASES = {
     "TicketsMintic": "https://storage.googleapis.com/contenidos-etraining/HelpDesk/TT.xlsx",
     "TicketsEJRLB": "https://storage.googleapis.com/contenidos-etraining/HelpDesk/EJRLB.xlsx"
@@ -261,21 +262,12 @@ def detectar_anomalias(df):
 # FILTRADO CACHEADO
 # ===============================
 
-@st.cache_data
-def filtrar_df(df, grupo, prioridad, origen):
-
-    df_filtrado = df.copy()
-
-    if grupo != "Todos":
-        df_filtrado = df_filtrado[df_filtrado["GRUPO"] == grupo]
-
-    if prioridad != "Todos":
-        df_filtrado = df_filtrado[df_filtrado["PRIORIDAD"] == prioridad]
-
-    if origen != "Todos":
-        df_filtrado = df_filtrado[df_filtrado["ORIGEN"] == origen]
-
-    return df_filtrado
+df_filtrado = filtrar_df(
+    df,
+    grupo_sel,
+    prioridad_sel,
+    origen_sel
+)
 # ===============================
 # CARGA
 # ===============================
@@ -1293,6 +1285,7 @@ with tab6:
     
     except Exception as e:
         st.error(f"No se pudo calcular la alerta temprana: {e}")
+
 
 
 
