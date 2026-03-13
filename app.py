@@ -655,13 +655,18 @@ with tab6:
     # NORMALIZAR ESTADO DEL TICKET
     df_ag["TICKET_ESTADO"] = (
         df_ag["TICKET_ESTADO"]
-        .fillna("Sin revisar")
+        .replace([None, np.nan], "")
         .astype(str)
         .str.strip()
     )
     
-    df_ag.loc[df_ag["TICKET_ESTADO"] == "", "TICKET_ESTADO"] = "Sin revisar"
-    df_ag.loc[df_ag["TICKET_ESTADO"].str.lower() == "nan", "TICKET_ESTADO"] = "Sin revisar"
+    df_ag["TICKET_ESTADO"] = df_ag["TICKET_ESTADO"].replace(
+        ["", "nan", "None", "null", "NULL"],
+        "Sin revisar"
+    )
+
+    st.write("Estados reales en dataset:")
+    st.write(df_ag["TICKET_ESTADO"].value_counts(dropna=False))
 
     df_ag["MES"] = pd.to_datetime(df_ag["CREACION"], errors="coerce").dt.to_period("M").astype(str)
 
@@ -1294,6 +1299,7 @@ with tab6:
     
     except Exception as e:
         st.error(f"No se pudo calcular la alerta temprana: {e}")
+
 
 
 
