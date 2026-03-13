@@ -29,34 +29,39 @@ SLA_COLORS = {
 # SELECCIÓN BASE DATOS
 # ===============================
 
+URLS_BASES = {
+    "TicketsHD": "https://storage.googleapis.com/contenidos-etraining/HelpDesk/EJRLB.xlsx",
+    "TicketsE": "https://storage.googleapis.com/contenidos-etraining/HelpDesk/TT.xlsx"
+}
+
 st.sidebar.header("Fuente de datos")
 
 base_datos = st.sidebar.selectbox(
     "Seleccionar base",
-    [
-        "TicketsHD.xlsx",
-        "TicketsE.xlsx"
-    ]
+    list(URLS_BASES.keys())
 )
+
 st.sidebar.header("Comparación de bases")
 
 base1 = st.sidebar.selectbox(
     "Base 1",
-    ["TicketsHD.xlsx", "TicketsE.xlsx"]
+    list(URLS_BASES.keys())
 )
 
 base2 = st.sidebar.selectbox(
     "Base 2",
-    ["TicketsHD.xlsx", "TicketsE.xlsx"],
+    list(URLS_BASES.keys()),
     index=1
 )
 # ===============================
 # CARGA DATOS
 # ===============================
-@st.cache_data(ttl=60)
-def cargar_datos(archivo):
+@st.cache_data(ttl=300)
+def cargar_datos(nombre_base):
 
-    df = pd.read_excel(archivo)
+    url = URLS_BASES[nombre_base]
+
+    df = pd.read_excel(url)
 
     df["CREACION"] = pd.to_datetime(df["CREACION"], errors="coerce")
     df["FECHA_RESPUESTA"] = pd.to_datetime(df["FECHA_RESPUESTA"], errors="coerce")
@@ -81,18 +86,14 @@ def cargar_datos(archivo):
     )
 
     if "TICKET_ASUNTO" in df.columns and "TICKET_DESCRIPCION" in df.columns:
-
         df["TEXTO_COMPLETO"] = (
             df["TICKET_ASUNTO"].fillna("") + " " +
             df["TICKET_DESCRIPCION"].fillna("")
         )
-
     else:
-
         df["TEXTO_COMPLETO"] = ""
 
     return df
-
 
 # ===============================
 # MODELO
@@ -1040,6 +1041,7 @@ with tab6:
     
     except Exception as e:
         st.error(f"No se pudo calcular la alerta temprana: {e}")
+
 
 
 
