@@ -27,9 +27,9 @@ SLA_COLORS = {
 }
 
 SENTIMENT_COLORS = {
-    "Negativo": "#e74c3c",
-    "Neutro": "#95a5a6",
-    "Positivo": "#2ecc71"
+    "Negativo": "#8C0000",
+    "Neutro": "#27B0F5",
+    "Positivo": "#008C36"
 }
 
 # ===============================
@@ -1535,7 +1535,8 @@ with tab7:
         y="Tickets",
         color="SENTIMIENTO",
         barmode="stack",
-        title="Distribución de sentimiento por agente"
+        title="Distribución de sentimiento por agente",
+        color_discrete_map=SENTIMENT_COLORS
     )
 
     st.plotly_chart(fig_agente, use_container_width=True)
@@ -1569,6 +1570,7 @@ with tab7:
             negativos[cols],
             use_container_width=True
         )
+
 
 
 
