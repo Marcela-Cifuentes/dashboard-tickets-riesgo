@@ -1017,9 +1017,6 @@ with tab6:
     st.subheader("Tickets estancados")
 
     if len(tickets_estancados) > 0:
-    st.error(f"{len(tickets_estancados)} tickets estancados detectados")
-
-    if len(tickets_estancados) > 0:
     
         st.dataframe(
             tickets_estancados[
@@ -1327,6 +1324,7 @@ with tab6:
     
     except Exception as e:
         st.error(f"No se pudo calcular la alerta temprana: {e}")
+
 
 
 
