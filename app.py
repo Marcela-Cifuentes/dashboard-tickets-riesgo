@@ -347,7 +347,7 @@ with tab1:
     col1, col2, col3, col4 = st.columns(4)
 
     col1.metric("Total Tickets", len(df_filtrado))
-    col2.metric("Promedio días", round(df_filtrado["DIAS"].mean(),2))
+    col2.metric("Promedio días resolución", round(df_filtrado["DIAS"].mean(),2))
     col3.metric("% Riesgo >5 días", round(df_filtrado["RIESGO_OPERATIVO"].mean()*100,2))
     col4.metric("% Demora crítica", round(df_filtrado["DEMORA_CRITICA"].mean()*100,2))
 
@@ -408,7 +408,7 @@ with tab1:
 
     colA, colB = st.columns(2)
 
-    # HISTOGRAMA TIEMPO RESOLUCIÓN
+    # HISTOGRAMA RESOLUCIÓN
     with colA:
 
         st.subheader("Distribución de días de resolución")
@@ -426,7 +426,7 @@ with tab1:
 
         st.plotly_chart(fig_hist, use_container_width=True)
 
-    # PIE CHART SLA
+    # SLA DISTRIBUCIÓN
     with colB:
 
         st.subheader("Estado SLA")
@@ -471,10 +471,12 @@ with tab1:
 
     st.subheader("Tendencia semanal de tickets")
 
-    df_filtrado["SEMANA"] = df_filtrado["CREACION"].dt.to_period("W").astype(str)
+    df_tmp = df_filtrado.copy()
+
+    df_tmp["SEMANA"] = df_tmp["CREACION"].dt.to_period("W").astype(str)
 
     tickets_semana = (
-        df_filtrado.groupby("SEMANA")
+        df_tmp.groupby("SEMANA")
         .size()
         .reset_index(name="Tickets")
     )
@@ -1422,6 +1424,7 @@ with tab6:
     
     except Exception as e:
         st.error(f"No se pudo calcular la alerta temprana: {e}")
+
 
 
 
