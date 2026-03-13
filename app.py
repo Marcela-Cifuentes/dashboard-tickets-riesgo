@@ -60,7 +60,7 @@ base2 = st.sidebar.selectbox(
 # ===============================
 # CARGA DATOS
 # ===============================
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=7200)
 def cargar_datos(nombre_base):
 
     url = URLS_BASES[nombre_base]
@@ -262,12 +262,21 @@ def detectar_anomalias(df):
 # FILTRADO CACHEADO
 # ===============================
 
-df_filtrado = filtrar_df(
-    df,
-    grupo_sel,
-    prioridad_sel,
-    origen_sel
-)
+@st.cache_data
+def filtrar_df(df, grupo, prioridad, origen):
+
+    df_filtrado = df.copy()
+
+    if grupo != "Todos":
+        df_filtrado = df_filtrado[df_filtrado["GRUPO"] == grupo]
+
+    if prioridad != "Todos":
+        df_filtrado = df_filtrado[df_filtrado["PRIORIDAD"] == prioridad]
+
+    if origen != "Todos":
+        df_filtrado = df_filtrado[df_filtrado["ORIGEN"] == origen]
+
+    return df_filtrado
 # ===============================
 # CARGA
 # ===============================
@@ -1285,6 +1294,7 @@ with tab6:
     
     except Exception as e:
         st.error(f"No se pudo calcular la alerta temprana: {e}")
+
 
 
 
