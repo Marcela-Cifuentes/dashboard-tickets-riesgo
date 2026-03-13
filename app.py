@@ -351,7 +351,24 @@ def detectar_conflicto(texto):
         return "⚠️ Conflictivo"
 
     return "Normal"
+# ===============================
+# DETECCIÓN INCIDENTES RECURRENTES
+# ===============================
 
+def detectar_incidentes_recurrentes(df, top_n=10):
+
+    textos = df["TEXTO_COMPLETO"].fillna("").apply(limpiar_texto)
+
+    palabras = " ".join(textos).split()
+
+    conteo = Counter(palabras)
+
+    frecuentes = pd.DataFrame(
+        conteo.most_common(top_n),
+        columns=["Palabra","Frecuencia"]
+    )
+
+    return frecuentes
 
 # ===============================
 # FILTRADO CACHEADO
@@ -1570,7 +1587,6 @@ with tab7:
 
     st.subheader("Detección de urgencia en tickets")
 
-    st.subheader("Detección de urgencia en tickets")
 
     fig_urg = px.pie(
         df_filtrado,
@@ -1685,43 +1701,37 @@ with tab7:
             urgentes[cols],
             use_container_width=True
         )
+        
+    st.subheader("Detección de incidentes recurrentes")
+
+    recurrentes = detectar_incidentes_recurrentes(df_filtrado, 15)
     
+    fig_rec = px.bar(
+        recurrentes,
+        x="Frecuencia",
+        y="Palabra",
+        orientation="h",
+        title="Problemas más reportados"
+    )
     
+    st.plotly_chart(fig_rec, use_container_width=True)
+
+
+    st.subheader("Tickets asociados a incidentes recurrentes")
+
+    palabra_sel = st.selectbox(
+        "Seleccionar palabra clave",
+        recurrentes["Palabra"]
+    )
     
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    tickets_rel = df_filtrado[
+        df_filtrado["TEXTO_COMPLETO"].str.contains(palabra_sel, case=False, na=False)
+    ]
+    
+    st.dataframe(
+        tickets_rel[
+            ["TICKET_ID","TICKET_ASUNTO","GRUPO","AGENTE","PRIORIDAD"]
+        ],
+        use_container_width=True
+    )
+            
