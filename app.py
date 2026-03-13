@@ -867,7 +867,7 @@ with tab6:
         estado_tabla = (
             abiertos["ESTADO_OPERATIVO"]
             .value_counts()
-            .reindex(["🔴 Sin revisar","🟠 En proceso","🟡 Escalado"])
+            .reindex(["🔴 Sin revisar","🟠 En proceso","🟡 Escalado"], fill_value=0)
             .reset_index()
         )
         
@@ -1230,6 +1230,7 @@ with tab6:
     
     except Exception as e:
         st.error(f"No se pudo calcular la alerta temprana: {e}")
+
 
 
 
