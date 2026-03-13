@@ -781,10 +781,9 @@ with tab6:
     st.subheader("Tickets no resueltos")
 
     abiertos = df_ag[
-        df_ag["TICKET_ESTADO"]
-        .astype(str)
-        .str.strip()
-        .isin(["En Proceso", "Escalado"])
+        (df_ag["TICKET_ESTADO"].isna()) |
+        (df_ag["TICKET_ESTADO"].astype(str).str.strip() == "") |
+        (df_ag["TICKET_ESTADO"].isin(["En Proceso", "Escalado"]))
     ]
 
     if len(abiertos) == 0:
@@ -803,6 +802,31 @@ with tab6:
         fig = px.bar(tabla, x="AGENTE", y="Tickets abiertos", color="GRUPO")
 
         st.plotly_chart(fig, use_container_width=True, key="tickets_abiertos")
+
+    abiertos["ESTADO_OPERATIVO"] = np.where(
+        abiertos["TICKET_ESTADO"].isna() | (abiertos["TICKET_ESTADO"].astype(str).str.strip()==""),
+        "🔴 Sin revisar",
+        np.where(
+            abiertos["TICKET_ESTADO"]=="En Proceso",
+            "🟠 En proceso",
+            "🟡 Escalado"
+        )
+    )
+
+    estado_tabla = (
+        abiertos.groupby("ESTADO_OPERATIVO")
+        .size()
+        .reset_index(name="Tickets")
+    )
+    
+    fig_estado = px.pie(
+        estado_tabla,
+        names="ESTADO_OPERATIVO",
+        values="Tickets",
+        title="Estado operativo de tickets abiertos"
+    )
+    
+    st.plotly_chart(fig_estado, use_container_width=True, key="estado_operativo")
 
     # ===============================
     # MEJORA PRO: KPIs + RANKING + RIESGO SLA (tickets abiertos)
@@ -1124,6 +1148,7 @@ with tab6:
     
     except Exception as e:
         st.error(f"No se pudo calcular la alerta temprana: {e}")
+
 
 
 
