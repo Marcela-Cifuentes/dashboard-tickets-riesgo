@@ -780,7 +780,12 @@ with tab6:
 
     st.subheader("Tickets no resueltos")
 
-    abiertos = df_ag[df_ag["FECHA_RESPUESTA"].isna()]
+    abiertos = df_ag[
+        df_ag["TICKET_ESTADO"]
+        .astype(str)
+        .str.strip()
+        .isin(["En Proceso", "Escalado"])
+    ]
 
     if len(abiertos) == 0:
         st.success("No hay tickets pendientes")
@@ -799,6 +804,84 @@ with tab6:
 
         st.plotly_chart(fig, use_container_width=True, key="tickets_abiertos")
 
+    # ===============================
+    # MEJORA PRO: KPIs + RANKING + RIESGO SLA (tickets abiertos)
+    # ===============================
+    
+    st.divider()
+    st.subheader("Análisis avanzado de tickets abiertos")
+    
+    # KPIs
+    col1, col2, col3, col4 = st.columns(4)
+    
+    total_abiertos = len(abiertos)
+    promedio_dias_abiertos = round(abiertos["DIAS"].mean(), 2) if total_abiertos > 0 else 0
+    
+    riesgo_abiertos = abiertos[abiertos["DIAS"] > 5]
+    criticos_abiertos = abiertos[abiertos["DIAS"] > 7]
+    
+    pct_riesgo = round((len(riesgo_abiertos) / total_abiertos) * 100, 2) if total_abiertos > 0 else 0
+    pct_criticos = round((len(criticos_abiertos) / total_abiertos) * 100, 2) if total_abiertos > 0 else 0
+    
+    col1.metric("Tickets abiertos", total_abiertos)
+    col2.metric("Promedio días abiertos", promedio_dias_abiertos)
+    col3.metric("% en riesgo SLA", pct_riesgo)
+    col4.metric("% críticos (>7 días)", pct_criticos)
+    
+    # ===============================
+    # Ranking agentes con más abiertos
+    # ===============================
+    
+    st.subheader("Ranking de agentes con más tickets abiertos")
+    
+    ranking_abiertos = (
+        abiertos.groupby("AGENTE")
+        .size()
+        .reset_index(name="Tickets abiertos")
+        .sort_values("Tickets abiertos", ascending=False)
+    )
+    
+    st.dataframe(ranking_abiertos, use_container_width=True)
+    
+    fig_rank = px.bar(
+        ranking_abiertos,
+        x="AGENTE",
+        y="Tickets abiertos",
+        title="Carga de tickets abiertos por agente"
+    )
+    
+    st.plotly_chart(fig_rank, use_container_width=True, key="ranking_abiertos_agente")
+    
+    
+    # ===============================
+    # Riesgo SLA en tickets abiertos
+    # ===============================
+    
+    st.subheader("Riesgo SLA en tickets abiertos")
+    
+    abiertos["RIESGO_SLA"] = np.where(
+        abiertos["DIAS"] <= 3,
+        "🟢 Normal",
+        np.where(abiertos["DIAS"] <= 5, "🟡 En riesgo", "🔴 Crítico")
+    )
+    
+    riesgo_tabla = (
+        abiertos.groupby("RIESGO_SLA")
+        .size()
+        .reset_index(name="Tickets")
+    )
+    
+    fig_riesgo = px.pie(
+        riesgo_tabla,
+        names="RIESGO_SLA",
+        values="Tickets",
+        title="Estado SLA de tickets abiertos"
+    )
+    
+    st.plotly_chart(fig_riesgo, use_container_width=True, key="riesgo_sla_abiertos")
+    
+    
+    
     # ===============================
     # TICKETS POR AGENTE Y GRUPO
     # ===============================
@@ -1041,6 +1124,7 @@ with tab6:
     
     except Exception as e:
         st.error(f"No se pudo calcular la alerta temprana: {e}")
+
 
 
 
