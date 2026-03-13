@@ -259,6 +259,28 @@ def detectar_anomalias(df):
     return df_clean
 
 # ===============================
+# ANALISIS DE SENTIMIENTO
+# ===============================
+
+@st.cache_resource
+def cargar_modelo_sentimiento():
+    return SentimentIntensityAnalyzer()
+
+
+def analizar_sentimiento(texto, modelo):
+
+    if pd.isna(texto):
+        return "Neutro"
+
+    score = modelo.polarity_scores(str(texto))["compound"]
+
+    if score >= 0.05:
+        return "Positivo"
+    elif score <= -0.05:
+        return "Negativo"
+    else:
+        return "Neutro"
+# ===============================
 # FILTRADO CACHEADO
 # ===============================
 
@@ -286,6 +308,12 @@ df = cargar_datos(base_datos)
 modelo, vectorizer, encoder = cargar_modelo()
 
 df["TIPO_INCIDENTE"] = df["TEXTO_COMPLETO"].apply(clasificar_incidente)
+
+modelo_sent = cargar_modelo_sentimiento()
+
+df["SENTIMIENTO"] = df["TEXTO_COMPLETO"].apply(
+    lambda x: analizar_sentimiento(x, modelo_sent)
+)
 
 # ===============================
 # FILTROS
@@ -324,14 +352,14 @@ else:
 # TABS
 # ===============================
 
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "Resumen",
     "Operación",
     "Riesgo",
     "Modelo",
     "Comparación",
-    "Agentes"
-    
+    "Agentes",
+    "Experiencia Usuario"
 ])
 
 # ===============================
@@ -1425,6 +1453,107 @@ with tab6:
     except Exception as e:
         st.error(f"No se pudo calcular la alerta temprana: {e}")
 
+# ===============================
+# TAB EXPERIENCIA DEL USUARIO
+# ===============================
+
+with tab7:
+
+    st.header("Experiencia del usuario y sentimiento de tickets")
+
+    # ===============================
+    # DISTRIBUCIÓN DE SENTIMIENTO
+    # ===============================
+
+    st.subheader("Sentimiento general de los tickets")
+
+    fig_sent = px.pie(
+        df_filtrado,
+        names="SENTIMIENTO",
+        title="Distribución de sentimiento en tickets"
+    )
+
+    st.plotly_chart(fig_sent, use_container_width=True)
+
+    st.divider()
+
+    # ===============================
+    # SENTIMIENTO POR GRUPO
+    # ===============================
+
+    st.subheader("Sentimiento por grupo")
+
+    sent_grupo = (
+        df_filtrado.groupby(["GRUPO","SENTIMIENTO"])
+        .size()
+        .reset_index(name="Tickets")
+    )
+
+    fig_grupo = px.bar(
+        sent_grupo,
+        x="GRUPO",
+        y="Tickets",
+        color="SENTIMIENTO",
+        barmode="stack",
+        title="Distribución de sentimiento por grupo"
+    )
+
+    st.plotly_chart(fig_grupo, use_container_width=True)
+
+    st.divider()
+
+    # ===============================
+    # SENTIMIENTO POR AGENTE
+    # ===============================
+
+    st.subheader("Sentimiento por agente")
+
+    sent_agente = (
+        df_filtrado.groupby(["AGENTE","SENTIMIENTO"])
+        .size()
+        .reset_index(name="Tickets")
+    )
+
+    fig_agente = px.bar(
+        sent_agente,
+        x="AGENTE",
+        y="Tickets",
+        color="SENTIMIENTO",
+        barmode="stack",
+        title="Distribución de sentimiento por agente"
+    )
+
+    st.plotly_chart(fig_agente, use_container_width=True)
+
+    st.divider()
+
+    # ===============================
+    # TICKETS NEGATIVOS
+    # ===============================
+
+    st.subheader("Tickets con sentimiento negativo")
+
+    negativos = df_filtrado[df_filtrado["SENTIMIENTO"] == "Negativo"]
+
+    if len(negativos) == 0:
+        st.success("No hay tickets con sentimiento negativo")
+    else:
+
+        cols = [
+            c for c in [
+                "TICKET_ID",
+                "TICKET_ASUNTO",
+                "GRUPO",
+                "AGENTE",
+                "PRIORIDAD",
+                "DIAS"
+            ] if c in negativos.columns
+        ]
+
+        st.dataframe(
+            negativos[cols],
+            use_container_width=True
+        )
 
 
 
