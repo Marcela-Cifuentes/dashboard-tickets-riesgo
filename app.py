@@ -327,6 +327,32 @@ def detectar_urgencia(texto):
         return "🔥 Alta urgencia"
 
     return "Normal"
+
+# ===============================
+# CONFLICTO
+# ===============================
+def detectar_conflicto(texto):
+
+    if pd.isna(texto):
+        return "Normal"
+
+    texto = str(texto).lower()
+
+    palabras_conflicto = [
+        "no sirve",
+        "sigue igual",
+        "otra vez",
+        "nadie responde",
+        "muy mal",
+        "no solucionan"
+    ]
+
+    if any(p in texto for p in palabras_conflicto):
+        return "⚠️ Conflictivo"
+
+    return "Normal"
+
+
 # ===============================
 # FILTRADO CACHEADO
 # ===============================
@@ -354,13 +380,30 @@ df = cargar_datos(base_datos)
 
 modelo, vectorizer, encoder = cargar_modelo()
 
+# Clasificación básica de incidentes
 df["TIPO_INCIDENTE"] = df["TEXTO_COMPLETO"].apply(clasificar_incidente)
+
+# ===============================
+# MODELO DE SENTIMIENTO
+# ===============================
 
 modelo_sent = cargar_modelo_sentimiento()
 
 df["SENTIMIENTO"] = df["TEXTO_COMPLETO"].apply(
     lambda x: analizar_sentimiento(x, modelo_sent)
 )
+
+# ===============================
+# DETECCIÓN DE URGENCIA
+# ===============================
+
+df["URGENCIA"] = df["TEXTO_COMPLETO"].apply(detectar_urgencia)
+
+# ===============================
+# DETECCIÓN DE CONFLICTO
+# ===============================
+
+df["CONFLICTO"] = df["TEXTO_COMPLETO"].apply(detectar_conflicto)
 
 # ===============================
 # FILTROS
@@ -1645,6 +1688,7 @@ with tab7:
     
     
     
+
 
 
 
