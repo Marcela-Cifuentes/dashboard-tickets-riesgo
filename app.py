@@ -987,13 +987,6 @@ with tab6:
     
     st.divider()
     st.subheader("Análisis avanzado de tickets abiertos")
-    
-    # KPIs
-    col1, col2, col3, col4 = st.columns(4)
-    
-    total_abiertos = len(abiertos)
-    promedio_dias_abiertos = round(abiertos["DIAS"].mean(), 2) if total_abiertos > 0 else 0
-
     # ===============================
     # DETECCIÓN DE TICKETS ESTANCADOS
     # ===============================
@@ -1003,6 +996,12 @@ with tab6:
         ((abiertos["TICKET_ESTADO"] == "Escalado") & (abiertos["DIAS"] > 5))
     ]
     
+    # KPIs
+    col1, col2, col3, col4, col5 = st.columns(5)
+    
+    total_abiertos = len(abiertos)
+    promedio_dias_abiertos = round(abiertos["DIAS"].mean(), 2) if total_abiertos > 0 else 0
+  
     riesgo_abiertos = abiertos[abiertos["DIAS"] > 5]
     criticos_abiertos = abiertos[abiertos["DIAS"] > 7]
     
@@ -1013,9 +1012,12 @@ with tab6:
     col2.metric("Promedio días abiertos", promedio_dias_abiertos)
     col3.metric("% en riesgo SLA", pct_riesgo)
     col4.metric("% críticos (>7 días)", pct_criticos)
-    st.metric("⚠ Tickets estancados", len(tickets_estancados))
+    col5.metric(" Tickets estancados", len(tickets_estancados))
 
     st.subheader("Tickets estancados")
+
+    if len(tickets_estancados) > 0:
+    st.error(f"{len(tickets_estancados)} tickets estancados detectados")
 
     if len(tickets_estancados) > 0:
     
@@ -1325,6 +1327,7 @@ with tab6:
     
     except Exception as e:
         st.error(f"No se pudo calcular la alerta temprana: {e}")
+
 
 
 
