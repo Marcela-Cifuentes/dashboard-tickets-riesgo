@@ -664,9 +664,15 @@ with tab6:
         ["", "nan", "None", "null", "NULL"],
         "Sin revisar"
     )
-
+#temporal
     st.write("Estados reales en dataset:")
     st.write(df_ag["TICKET_ESTADO"].value_counts(dropna=False))
+
+    st.write("Tickets con estado vacío real:")
+    st.write(df_ag[df_ag["TICKET_ESTADO"].isna()])
+
+    st.write("Cantidad de estados vacíos:")
+    st.write(df_ag["TICKET_ESTADO"].isna().sum())
 
     df_ag["MES"] = pd.to_datetime(df_ag["CREACION"], errors="coerce").dt.to_period("M").astype(str)
 
@@ -845,14 +851,24 @@ with tab6:
 
     df_ag["TICKET_ESTADO"] = (
         df_ag["TICKET_ESTADO"]
+        .replace([None, np.nan], "")
         .astype(str)
         .str.strip()
-        .replace(["nan", "None", ""], "Sin revisar")
     )
-    abiertos = df_ag[
-        df_ag["TICKET_ESTADO"].isin(["Sin revisar", "En Proceso", "Escalado"])
-    ].copy()
     
+    df_ag["TICKET_ESTADO"] = df_ag["TICKET_ESTADO"].replace(
+        ["", "nan", "None", "null", "NULL"],
+        "Sin revisar"
+    )
+    st.write("Estados reales en dataset:")
+    st.write(df_ag["TICKET_ESTADO"].value_counts(dropna=False))
+
+    tickets_estancados = abiertos[
+        ((abiertos["TICKET_ESTADO"] == "En Proceso") & (abiertos["DIAS"] > 3)) |
+        ((abiertos["TICKET_ESTADO"] == "Escalado") & (abiertos["DIAS"] > 5))
+    ]
+    
+    st.metric("Tickets estancados", len(tickets_estancados))
     # ===============================
     # CLASIFICACIÓN OPERATIVA
     # ===============================
@@ -1299,6 +1315,7 @@ with tab6:
     
     except Exception as e:
         st.error(f"No se pudo calcular la alerta temprana: {e}")
+
 
 
 
