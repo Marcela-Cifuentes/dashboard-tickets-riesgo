@@ -11,6 +11,7 @@ from collections import Counter
 from sklearn.ensemble import IsolationForest
 from sklearn.metrics import roc_curve, auc, confusion_matrix
 from streamlit_autorefresh import st_autorefresh
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 st.set_page_config(page_title="Sistema Inteligente de Tickets", layout="wide")
 
@@ -132,6 +133,12 @@ def cargar_datos(nombre_base):
 # ===============================
 
 @st.cache_resource
+def cargar_modelo_sentimiento():
+    try:
+        return SentimentIntensityAnalyzer()
+    except:
+        st.error("No se pudo cargar el modelo de sentimiento")
+        return None
 def cargar_modelo():
 
     modelo = joblib.load("modelo_logreg.pkl")
@@ -1554,6 +1561,7 @@ with tab7:
             negativos[cols],
             use_container_width=True
         )
+
 
 
 
