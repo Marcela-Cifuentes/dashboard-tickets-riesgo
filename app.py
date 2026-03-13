@@ -30,8 +30,8 @@ SLA_COLORS = {
 # ===============================
 
 URLS_BASES = {
-    "TicketsHD": "https://storage.googleapis.com/contenidos-etraining/HelpDesk/EJRLB.xlsx",
-    "TicketsE": "https://storage.googleapis.com/contenidos-etraining/HelpDesk/TT.xlsx"
+    "TicketsHD": "https://storage.googleapis.com/contenidos-etraining/HelpDesk/TT.xlsx",
+    "TicketsE": "https://storage.googleapis.com/contenidos-etraining/HelpDesk/EJRLB.xlsx"
 }
 
 st.sidebar.header("Fuente de datos")
@@ -1041,6 +1041,7 @@ with tab6:
     
     except Exception as e:
         st.error(f"No se pudo calcular la alerta temprana: {e}")
+
 
 
 
