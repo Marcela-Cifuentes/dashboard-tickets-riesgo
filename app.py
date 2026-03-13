@@ -858,7 +858,7 @@ with tab6:
             # TOP AGENTES POR TIPO INCIDENTE
             # ===============================
     
-            st.subheader("🏅 Top agente por tipo de incidente")
+            st.subheader(" Top agente por tipo de incidente")
     
             top_agentes = (
                 df_ag.groupby(["TIPO_INCIDENTE","AGENTE"])
@@ -1040,6 +1040,7 @@ with tab6:
     
     except Exception as e:
         st.error(f"No se pudo calcular la alerta temprana: {e}")
+
 
 
 
