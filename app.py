@@ -807,11 +807,15 @@ with tab6:
     # ===============================
     
     st.subheader("Tickets no resueltos")
-    
+
+    df_ag["TICKET_ESTADO"] = (
+        df_ag["TICKET_ESTADO"]
+        .astype(str)
+        .str.strip()
+        .replace(["nan", "None", ""], "Sin revisar")
+    )
     abiertos = df_ag[
-        (df_ag["TICKET_ESTADO"].isna()) |
-        (df_ag["TICKET_ESTADO"].astype(str).str.strip() == "") |
-        (df_ag["TICKET_ESTADO"].isin(["En Proceso", "Escalado"]))
+        df_ag["TICKET_ESTADO"].isin(["Sin revisar", "En Proceso", "Escalado"])
     ].copy()
     
     # ===============================
@@ -819,10 +823,10 @@ with tab6:
     # ===============================
     
     abiertos["ESTADO_OPERATIVO"] = np.where(
-        abiertos["TICKET_ESTADO"].isna() | (abiertos["TICKET_ESTADO"].astype(str).str.strip()==""),
+        abiertos["TICKET_ESTADO"] == "Sin revisar",
         "🔴 Sin revisar",
         np.where(
-            abiertos["TICKET_ESTADO"]=="En Proceso",
+            abiertos["TICKET_ESTADO"] == "En Proceso",
             "🟠 En proceso",
             "🟡 Escalado"
         )
@@ -859,12 +863,15 @@ with tab6:
         # ===============================
         # ESTADO OPERATIVO
         # ===============================
-    
+        st.write(abiertos["TICKET_ESTADO"].value_counts())
         estado_tabla = (
-            abiertos.groupby("ESTADO_OPERATIVO")
-            .size()
-            .reset_index(name="Tickets")
+            abiertos["ESTADO_OPERATIVO"]
+            .value_counts()
+            .reindex(["🔴 Sin revisar","🟠 En proceso","🟡 Escalado"])
+            .reset_index()
         )
+        
+        estado_tabla.columns = ["ESTADO_OPERATIVO","Tickets"]
     
         fig_estado = px.pie(
             estado_tabla,
@@ -1223,6 +1230,7 @@ with tab6:
     
     except Exception as e:
         st.error(f"No se pudo calcular la alerta temprana: {e}")
+
 
 
 
