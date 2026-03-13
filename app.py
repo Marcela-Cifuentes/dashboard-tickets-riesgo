@@ -308,7 +308,7 @@ df_filtrado = filtrar_df(
 # ALERTAS
 # ===============================
 
-st.sidebar.markdown("## 🚦 Estado Operacional")
+st.sidebar.markdown("##  Estado Operacional")
 
 tickets_criticos = df_filtrado[df_filtrado["DIAS"] > 7]
 tickets_riesgo = df_filtrado[df_filtrado["DIAS"] > 5]
@@ -1325,6 +1325,7 @@ with tab6:
     
     except Exception as e:
         st.error(f"No se pudo calcular la alerta temprana: {e}")
+
 
 
 
