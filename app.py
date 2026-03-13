@@ -633,6 +633,17 @@ with tab6:
 
     df_ag = df.copy()
 
+    # NORMALIZAR ESTADO DEL TICKET
+    df_ag["TICKET_ESTADO"] = (
+        df_ag["TICKET_ESTADO"]
+        .fillna("Sin revisar")
+        .astype(str)
+        .str.strip()
+    )
+    
+    df_ag.loc[df_ag["TICKET_ESTADO"] == "", "TICKET_ESTADO"] = "Sin revisar"
+    df_ag.loc[df_ag["TICKET_ESTADO"].str.lower() == "nan", "TICKET_ESTADO"] = "Sin revisar"
+
     df_ag["MES"] = pd.to_datetime(df_ag["CREACION"], errors="coerce").dt.to_period("M").astype(str)
 
     # ===============================
@@ -863,7 +874,8 @@ with tab6:
         # ===============================
         # ESTADO OPERATIVO
         # ===============================
-        st.write(abiertos["TICKET_ESTADO"].value_counts())
+        st.write("Estados en el dataset filtrado:")
+        st.write(df_ag["TICKET_ESTADO"].value_counts())
         estado_tabla = (
             abiertos["ESTADO_OPERATIVO"]
             .value_counts()
@@ -910,6 +922,39 @@ with tab6:
             key="backlog_grupo"
         )
 
+
+    # ===============================
+    # TICKETS SIN REVISAR POR GRUPO
+    # ===============================
+    
+    st.subheader("Tickets sin revisar por grupo")
+    
+    sin_revisar = abiertos[abiertos["TICKET_ESTADO"] == "Sin revisar"]
+    
+    tabla_sin_revisar = (
+        sin_revisar.groupby("GRUPO")
+        .size()
+        .reset_index(name="Tickets sin revisar")
+    )
+    
+    if len(tabla_sin_revisar) > 0:
+    
+        fig_sin_revisar = px.bar(
+            tabla_sin_revisar,
+            x="GRUPO",
+            y="Tickets sin revisar",
+            title="Backlog de tickets sin revisar por grupo",
+            color="Tickets sin revisar"
+        )
+    
+        st.plotly_chart(
+            fig_sin_revisar,
+            use_container_width=True,
+            key="sin_revisar_grupo"
+        )
+    
+    else:
+        st.info("No hay tickets sin revisar en los filtros actuales")
     # ===============================
     # MEJORA PRO: KPIs + RANKING + RIESGO SLA (tickets abiertos)
     # ===============================
@@ -1230,6 +1275,7 @@ with tab6:
     
     except Exception as e:
         st.error(f"No se pudo calcular la alerta temprana: {e}")
+
 
 
 
