@@ -392,6 +392,42 @@ with tab1:
 
         st.plotly_chart(fig_sla, use_container_width=True)
 
+    st.subheader("Distribución de tickets por grupo")
+
+    tickets_grupo = (
+        df_filtrado.groupby("GRUPO")
+        .size()
+        .reset_index(name="Tickets")
+        .sort_values("Tickets", ascending=False)
+    )
+    
+    fig_grupo = px.bar(
+        tickets_grupo,
+        x="GRUPO",
+        y="Tickets",
+        title="Volumen de tickets por grupo"
+    )
+    
+    st.plotly_chart(fig_grupo, use_container_width=True)
+
+
+    st.subheader("Riesgo SLA por grupo")
+
+    riesgo_grupo = (
+        df_filtrado.groupby("GRUPO")["RIESGO_OPERATIVO"]
+        .mean()
+        .reset_index()
+    )
+    
+    fig_riesgo_grupo = px.bar(
+        riesgo_grupo,
+        x="GRUPO",
+        y="RIESGO_OPERATIVO",
+        title="Porcentaje de tickets en riesgo por grupo"
+    )
+    
+    st.plotly_chart(fig_riesgo_grupo, use_container_width=True)
+
 # ===============================
 # TAB OPERACIÓN
 # ===============================
@@ -1325,6 +1361,7 @@ with tab6:
     
     except Exception as e:
         st.error(f"No se pudo calcular la alerta temprana: {e}")
+
 
 
 
