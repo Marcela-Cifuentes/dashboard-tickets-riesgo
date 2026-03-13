@@ -293,6 +293,40 @@ def analizar_sentimiento(texto, modelo):
         return "Negativo"
     else:
         return "Neutro"
+df["URGENCIA"] = df["TEXTO_COMPLETO"].apply(detectar_urgencia)
+# ===============================
+# DETECCIÓN DE URGENCIA / FRUSTRACIÓN
+# ===============================
+
+def detectar_urgencia(texto):
+
+    if pd.isna(texto):
+        return "Normal"
+
+    texto = str(texto).lower()
+
+    palabras_urgentes = [
+        "urgente",
+        "urgencia",
+        "no funciona",
+        "error",
+        "fallo",
+        "caido",
+        "caído",
+        "no puedo",
+        "bloqueado",
+        "problema",
+        "critico",
+        "crítico",
+        "ya",
+        "inmediato",
+        "necesito"
+    ]
+
+    if any(p in texto for p in palabras_urgentes):
+        return "🔥 Alta urgencia"
+
+    return "Normal"
 # ===============================
 # FILTRADO CACHEADO
 # ===============================
@@ -1491,6 +1525,18 @@ with tab7:
 
     st.divider()
 
+    st.subheader("Detección de urgencia en tickets")
+
+    st.subheader("Detección de urgencia en tickets")
+
+    fig_urg = px.pie(
+        df_filtrado,
+        names="URGENCIA",
+        title="Tickets con lenguaje de urgencia"
+    )
+    
+    st.plotly_chart(fig_urg, use_container_width=True)
+
     # ===============================
     # SENTIMIENTO POR GRUPO
     # ===============================
@@ -1571,8 +1617,34 @@ with tab7:
             use_container_width=True
         )
 
+    st.subheader("Tickets detectados como urgentes")
 
-
+    urgentes = df_filtrado[df_filtrado["URGENCIA"] == "🔥 Alta urgencia"]
+    
+    if len(urgentes) == 0:
+    
+        st.success("No se detectaron tickets urgentes")
+    
+    else:
+    
+        cols = [
+            c for c in [
+                "TICKET_ID",
+                "TICKET_ASUNTO",
+                "GRUPO",
+                "AGENTE",
+                "PRIORIDAD",
+                "DIAS"
+            ] if c in urgentes.columns
+        ]
+    
+        st.dataframe(
+            urgentes[cols],
+            use_container_width=True
+        )
+    
+    
+    
 
 
 
