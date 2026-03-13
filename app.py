@@ -17,7 +17,7 @@ st.set_page_config(page_title="Sistema Inteligente de Tickets", layout="wide")
 st.title("Sistema Inteligente de Monitoreo HelpDesk")
 st.caption("Analítica predictiva y monitoreo de riesgo operativo")
 
-st_autorefresh(interval=6000000, key="refresh")
+#st_autorefresh(interval=6000000, key="refresh")
 
 SLA_COLORS = {
     "🟢 Dentro SLA": "#2ecc71",
@@ -53,10 +53,13 @@ base2 = st.sidebar.selectbox(
     list(URLS_BASES.keys()),
     index=1
 )
+if st.sidebar.button("Actualizar datos"):
+    st.cache_data.clear()
+
 # ===============================
 # CARGA DATOS
 # ===============================
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=3600)
 def cargar_datos(nombre_base):
 
     url = URLS_BASES[nombre_base]
@@ -255,6 +258,25 @@ def detectar_anomalias(df):
     return df_clean
 
 # ===============================
+# FILTRADO CACHEADO
+# ===============================
+
+@st.cache_data
+def filtrar_df(df, grupo, prioridad, origen):
+
+    df_filtrado = df.copy()
+
+    if grupo != "Todos":
+        df_filtrado = df_filtrado[df_filtrado["GRUPO"] == grupo]
+
+    if prioridad != "Todos":
+        df_filtrado = df_filtrado[df_filtrado["PRIORIDAD"] == prioridad]
+
+    if origen != "Todos":
+        df_filtrado = df_filtrado[df_filtrado["ORIGEN"] == origen]
+
+    return df_filtrado
+# ===============================
 # CARGA
 # ===============================
 
@@ -274,16 +296,12 @@ grupo_sel = st.sidebar.selectbox("Grupo", ["Todos"] + sorted(df["GRUPO"].dropna(
 prioridad_sel = st.sidebar.selectbox("Prioridad", ["Todos"] + sorted(df["PRIORIDAD"].dropna().unique()))
 origen_sel = st.sidebar.selectbox("Origen", ["Todos"] + sorted(df["ORIGEN"].dropna().unique()))
 
-df_filtrado = df.copy()
-
-if grupo_sel != "Todos":
-    df_filtrado = df_filtrado[df_filtrado["GRUPO"] == grupo_sel]
-
-if prioridad_sel != "Todos":
-    df_filtrado = df_filtrado[df_filtrado["PRIORIDAD"] == prioridad_sel]
-
-if origen_sel != "Todos":
-    df_filtrado = df_filtrado[df_filtrado["ORIGEN"] == origen_sel]
+df_filtrado = filtrar_df(
+    df,
+    grupo_sel,
+    prioridad_sel,
+    origen_sel
+)
 
 # ===============================
 # ALERTAS
@@ -1275,6 +1293,7 @@ with tab6:
     
     except Exception as e:
         st.error(f"No se pudo calcular la alerta temprana: {e}")
+
 
 
 
