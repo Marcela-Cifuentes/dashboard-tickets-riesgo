@@ -65,6 +65,7 @@ def cargar_datos(nombre_base):
 
     df["CREACION"] = pd.to_datetime(df["CREACION"], errors="coerce")
     df["FECHA_RESPUESTA"] = pd.to_datetime(df["FECHA_RESPUESTA"], errors="coerce")
+    
 
     df["TIEMPO_HORAS"] = (
         df["FECHA_RESPUESTA"] - df["CREACION"]
@@ -78,6 +79,33 @@ def cargar_datos(nombre_base):
 
     df["RIESGO_OPERATIVO"] = (df["DIAS"] > 5).astype(int)
     df["DEMORA_CRITICA"] = (df["DIAS"] > 7).astype(int)
+
+    # ===============================
+    # LIMPIEZA ESTADO TICKET
+    # ===============================
+    
+    if "TICKET_ESTADO" in df.columns:
+    
+        df["TICKET_ESTADO"] = df["TICKET_ESTADO"].astype(str).str.strip()
+    
+        df["TICKET_ESTADO"] = df["TICKET_ESTADO"].replace(
+            ["", "nan", "None"],
+            "Sin revisar"
+        )
+    
+        df["ESTADO_OPERATIVO"] = np.where(
+            df["TICKET_ESTADO"] == "Sin revisar",
+            "🔴 Sin revisar",
+            np.where(
+                df["TICKET_ESTADO"] == "En Proceso",
+                "🟡 En proceso",
+                np.where(
+                    df["TICKET_ESTADO"] == "Escalado",
+                    "🟣 Escalado",
+                    "🟢 Resuelto"
+                )
+            )
+        )
 
     df["ESTADO_SLA"] = np.where(
         df["DIAS"] <= 3,
@@ -777,32 +805,19 @@ with tab6:
     # ===============================
     # TICKETS ABIERTOS
     # ===============================
-
+    
     st.subheader("Tickets no resueltos")
-
+    
     abiertos = df_ag[
         (df_ag["TICKET_ESTADO"].isna()) |
         (df_ag["TICKET_ESTADO"].astype(str).str.strip() == "") |
         (df_ag["TICKET_ESTADO"].isin(["En Proceso", "Escalado"]))
-    ]
-
-    if len(abiertos) == 0:
-        st.success("No hay tickets pendientes")
-
-    else:
-
-        tabla = (
-            abiertos.groupby(["AGENTE","GRUPO"])
-            .size()
-            .reset_index(name="Tickets abiertos")
-        )
-
-        st.dataframe(tabla)
-
-        fig = px.bar(tabla, x="AGENTE", y="Tickets abiertos", color="GRUPO")
-
-        st.plotly_chart(fig, use_container_width=True, key="tickets_abiertos")
-
+    ].copy()
+    
+    # ===============================
+    # CLASIFICACIÓN OPERATIVA
+    # ===============================
+    
     abiertos["ESTADO_OPERATIVO"] = np.where(
         abiertos["TICKET_ESTADO"].isna() | (abiertos["TICKET_ESTADO"].astype(str).str.strip()==""),
         "🔴 Sin revisar",
@@ -812,21 +827,81 @@ with tab6:
             "🟡 Escalado"
         )
     )
+    
+    if len(abiertos) == 0:
+    
+        st.success("No hay tickets pendientes")
+    
+    else:
+    
+        # ===============================
+        # TABLA POR AGENTE
+        # ===============================
+    
+        tabla = (
+            abiertos.groupby(["AGENTE","GRUPO"])
+            .size()
+            .reset_index(name="Tickets abiertos")
+        )
+    
+        st.dataframe(tabla)
+    
+        fig_abiertos = px.bar(
+            tabla,
+            x="AGENTE",
+            y="Tickets abiertos",
+            color="GRUPO",
+            title="Tickets abiertos por agente"
+        )
+    
+        st.plotly_chart(fig_abiertos, use_container_width=True, key="tickets_abiertos")
+    
+        # ===============================
+        # ESTADO OPERATIVO
+        # ===============================
+    
+        estado_tabla = (
+            abiertos.groupby("ESTADO_OPERATIVO")
+            .size()
+            .reset_index(name="Tickets")
+        )
+    
+        fig_estado = px.pie(
+            estado_tabla,
+            names="ESTADO_OPERATIVO",
+            values="Tickets",
+            title="Estado operativo de tickets abiertos"
+        )
+    
+        st.plotly_chart(fig_estado, use_container_width=True, key="estado_operativo")
 
-    estado_tabla = (
-        abiertos.groupby("ESTADO_OPERATIVO")
+    st.plotly_chart(fig_estado, use_container_width=True, key="estado_operativo")
+
+    # ===============================
+    # BACKLOG POR GRUPO
+    # ===============================
+    
+    st.subheader("Backlog de tickets abiertos por grupo")
+    
+    backlog = (
+        abiertos.groupby(["GRUPO","ESTADO_OPERATIVO"])
         .size()
         .reset_index(name="Tickets")
     )
     
-    fig_estado = px.pie(
-        estado_tabla,
-        names="ESTADO_OPERATIVO",
-        values="Tickets",
-        title="Estado operativo de tickets abiertos"
+    fig_backlog = px.bar(
+        backlog,
+        x="GRUPO",
+        y="Tickets",
+        color="ESTADO_OPERATIVO",
+        title="Distribución de tickets abiertos por grupo"
     )
     
-    st.plotly_chart(fig_estado, use_container_width=True, key="estado_operativo")
+    st.plotly_chart(
+        fig_backlog,
+        use_container_width=True,
+        key="backlog_grupo"
+    )
 
     # ===============================
     # MEJORA PRO: KPIs + RANKING + RIESGO SLA (tickets abiertos)
@@ -1148,6 +1223,7 @@ with tab6:
     
     except Exception as e:
         st.error(f"No se pudo calcular la alerta temprana: {e}")
+
 
 
 
