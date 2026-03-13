@@ -664,7 +664,8 @@ with tab6:
         ["", "nan", "None", "null", "NULL"],
         "Sin revisar"
     )
-#temporal
+"""
+    #temporal
     st.write("Estados reales en dataset:")
     st.write(df_ag["TICKET_ESTADO"].value_counts(dropna=False))
 
@@ -673,7 +674,7 @@ with tab6:
 
     st.write("Cantidad de estados vacíos:")
     st.write(df_ag["TICKET_ESTADO"].isna().sum())
-
+"""
     df_ag["MES"] = pd.to_datetime(df_ag["CREACION"], errors="coerce").dt.to_period("M").astype(str)
 
     # ===============================
@@ -862,12 +863,7 @@ with tab6:
     )
     st.write("Estados reales en dataset:")
     st.write(df_ag["TICKET_ESTADO"].value_counts(dropna=False))
-
-    tickets_estancados = abiertos[
-        ((abiertos["TICKET_ESTADO"] == "En Proceso") & (abiertos["DIAS"] > 3)) |
-        ((abiertos["TICKET_ESTADO"] == "Escalado") & (abiertos["DIAS"] > 5))
-    ]
-    
+  
     st.metric("Tickets estancados", len(tickets_estancados))
     # ===============================
     # CLASIFICACIÓN OPERATIVA
@@ -1315,6 +1311,7 @@ with tab6:
     
     except Exception as e:
         st.error(f"No se pudo calcular la alerta temprana: {e}")
+
 
 
 
