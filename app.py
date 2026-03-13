@@ -28,7 +28,8 @@ SLA_COLORS = {
 # ===============================
 # SELECCIÓN BASE DATOS
 # ===============================
-
+if st.sidebar.button("Actualizar datos"):
+    st.cache_data.clear()
 URLS_BASES = {
     "TicketsMintic": "https://storage.googleapis.com/contenidos-etraining/HelpDesk/TT.xlsx",
     "TicketsEJRLB": "https://storage.googleapis.com/contenidos-etraining/HelpDesk/EJRLB.xlsx"
@@ -53,8 +54,7 @@ base2 = st.sidebar.selectbox(
     list(URLS_BASES.keys()),
     index=1
 )
-if st.sidebar.button("Actualizar datos"):
-    st.cache_data.clear()
+
 
 # ===============================
 # CARGA DATOS
@@ -1293,6 +1293,7 @@ with tab6:
     
     except Exception as e:
         st.error(f"No se pudo calcular la alerta temprana: {e}")
+
 
 
 
