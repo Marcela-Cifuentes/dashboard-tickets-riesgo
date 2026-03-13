@@ -993,6 +993,15 @@ with tab6:
     
     total_abiertos = len(abiertos)
     promedio_dias_abiertos = round(abiertos["DIAS"].mean(), 2) if total_abiertos > 0 else 0
+
+    # ===============================
+    # DETECCIÓN DE TICKETS ESTANCADOS
+    # ===============================
+    
+    tickets_estancados = abiertos[
+        ((abiertos["TICKET_ESTADO"] == "En Proceso") & (abiertos["DIAS"] > 3)) |
+        ((abiertos["TICKET_ESTADO"] == "Escalado") & (abiertos["DIAS"] > 5))
+    ]
     
     riesgo_abiertos = abiertos[abiertos["DIAS"] > 5]
     criticos_abiertos = abiertos[abiertos["DIAS"] > 7]
@@ -1004,6 +1013,21 @@ with tab6:
     col2.metric("Promedio días abiertos", promedio_dias_abiertos)
     col3.metric("% en riesgo SLA", pct_riesgo)
     col4.metric("% críticos (>7 días)", pct_criticos)
+    st.metric("⚠ Tickets estancados", len(tickets_estancados))
+
+    st.subheader("Tickets estancados")
+
+    if len(tickets_estancados) > 0:
+    
+        st.dataframe(
+            tickets_estancados[
+                ["TICKET_ID","AGENTE","GRUPO","PRIORIDAD","DIAS","TICKET_ESTADO"]
+            ].sort_values("DIAS", ascending=False),
+            use_container_width=True
+        )
+    
+    else:
+        st.success("No hay tickets estancados")
     
     # ===============================
     # Ranking agentes con más abiertos
@@ -1301,6 +1325,7 @@ with tab6:
     
     except Exception as e:
         st.error(f"No se pudo calcular la alerta temprana: {e}")
+
 
 
 
