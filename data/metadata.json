@@ -1,0 +1,17 @@
+{
+  "actualizado_utc": "2026-06-11T03:26:02.933328+00:00",
+  "bases": {
+    "TicketsMintic": {
+      "filas": 17057,
+      "columnas": 36,
+      "segundos_proceso": 8.2,
+      "estado": "ok"
+    },
+    "TicketsEJRLB": {
+      "filas": 26211,
+      "columnas": 35,
+      "segundos_proceso": 10.0,
+      "estado": "ok"
+    }
+  }
+}
