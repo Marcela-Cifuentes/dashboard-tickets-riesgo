@@ -383,9 +383,42 @@ def cargar_modelo():
 
 
 def predecir_probabilidades(df: pd.DataFrame, modelo, vectorizer, encoder) -> pd.Series:
+    """Calcula PROB_RIESGO para todo el dataset.
+
+    Detecta automáticamente si el modelo es:
+      - ModeloPipeline (nuevo GBM): recibe DataFrame directamente.
+      - LogisticRegression (antiguo): necesita hstack sparse.
+    """
+    # Modelo nuevo (ModeloPipeline): recibe el df directamente
+    if isinstance(modelo, ModeloPipeline):
+        # Necesita las features extra que construye train_model.construir_features
+        # Si no existen, las calculamos sobre la marcha con valores neutros
+        df_feat = df.copy()
+        import datetime as _dt
+        if "HORA_CREACION" not in df_feat.columns:
+            df_feat["HORA_CREACION"]       = df_feat["CREACION"].dt.hour.fillna(9).astype(float)
+            df_feat["DIA_SEMANA"]          = df_feat["CREACION"].dt.dayofweek.fillna(0).astype(float)
+            df_feat["MES_CREACION"]        = df_feat["CREACION"].dt.month.fillna(1).astype(float)
+            df_feat["ES_FIN_SEMANA"]       = (df_feat["DIA_SEMANA"] >= 5).astype(float)
+            df_feat["ES_HORA_PICO"]        = df_feat["HORA_CREACION"].between(8, 12).astype(float)
+            df_feat["SCORE_SENT_FILL"]     = df_feat.get("SCORE_SENTIMIENTO",
+                                             pd.Series(0.0, index=df_feat.index)).fillna(0.0)
+            df_feat["FLAG_URGENCIA"]       = (df_feat.get("URGENCIA",
+                                             pd.Series("Normal", index=df_feat.index))
+                                             .astype(str) == "🔥 Alta urgencia").astype(float)
+            df_feat["FLAG_CONFLICTO"]      = (df_feat.get("CONFLICTO",
+                                             pd.Series("Normal", index=df_feat.index))
+                                             .astype(str) == "⚠️ Conflictivo").astype(float)
+            df_feat["HIST_AGENTE_AVG_DIAS"] = float(df_feat["DIAS"].mean())
+        probs = modelo.predict_proba(df_feat)[:, 1]
+        return pd.Series(probs, index=df.index, name="PROB_RIESGO")
+
+    # Modelo antiguo (LogReg con hstack sparse)
+    from scipy.sparse import csr_matrix
     X_text = vectorizer.transform(df["TEXTO_LIMPIO"].fillna(""))
     X_cat  = encoder.transform(df[["PRIORIDAD", "GRUPO", "ORIGEN"]])
-    X      = hstack([X_text, X_cat])
+    # Convertir a csr_matrix para evitar 'coo_matrix not subscriptable'
+    X = hstack([csr_matrix(X_text), csr_matrix(X_cat)], format="csr")
     return pd.Series(modelo.predict_proba(X)[:, 1], index=df.index, name="PROB_RIESGO")
 
 
@@ -421,11 +454,15 @@ def procesar_base(nombre_base: str) -> pd.DataFrame:
     df = cargar_excel(nombre_base)
     df = enriquecer_nlp(df)
 
+    # Inferencia de PROB_RIESGO solo si los artefactos existen Y son compatibles
+    df["PROB_RIESGO"] = np.nan
     if RUTA_MODELO.exists() and RUTA_VECTORIZER.exists() and RUTA_ENCODER.exists():
-        modelo, vectorizer, encoder = cargar_modelo()
-        df["PROB_RIESGO"] = predecir_probabilidades(df, modelo, vectorizer, encoder)
-    else:
-        df["PROB_RIESGO"] = np.nan
+        try:
+            modelo, vectorizer, encoder = cargar_modelo()
+            df["PROB_RIESGO"] = predecir_probabilidades(df, modelo, vectorizer, encoder)
+        except Exception as _e:
+            log.warning("No se pudo calcular PROB_RIESGO (modelo incompatible): %s", _e)
+            log.warning("Ejecuta train_model.py para generar el modelo nuevo.")
 
     df["ANOMALIA"] = detectar_anomalias(df)
 

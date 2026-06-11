@@ -145,7 +145,11 @@ def cargar_y_preparar() -> tuple[pd.DataFrame, pd.Series]:
     for base in BASES_ENTRENAMIENTO:
         log.info("Cargando base: %s", base)
         try:
-            df = pl.procesar_base(base)
+            # Usamos cargar_excel + enriquecer_nlp directamente
+            # (SIN procesar_base) para evitar que intente usar el modelo
+            # antiguo durante el entrenamiento del nuevo.
+            df = pl.cargar_excel(base)
+            df = pl.enriquecer_nlp(df)
             df = construir_features(df)
             frames.append(df)
         except Exception as e:
