@@ -7,6 +7,7 @@ v4: Filtros avanzados de agentes + fechas + exclusión de inactivos
 
 from __future__ import annotations
 
+import datetime
 import json
 from collections import Counter
 from pathlib import Path
@@ -146,8 +147,8 @@ tiene_agente = "AGENTE" in df.columns
 FILTER_KEYS = [
     "f_grupos", "f_agentes_inc", "f_agentes_exc",
     "f_prioridades", "f_origenes",
-    "f_fecha_ini", "f_fecha_fin",       # date_input keys
-    "_fi_override", "_ff_override",     # keys auxiliares de botones rápidos
+    "f_fechas",          # date_input de rango único
+    "f_fecha_preset",    # selectbox de preset rápido
     "f_dias", "f_busqueda",
     "f_ocultar_inactivos",
 ]
@@ -245,52 +246,50 @@ with st.sidebar:
     )
 
     # ── Rango de fechas ──────────────────────────────────────────────────────
-    # REGLA STREAMLIT: no se puede asignar session_state a una key que ya
-    # tiene un widget activo (StreamlitAPIException). Solución: los botones
-    # escriben en keys AUXILIARES (_fi_override, _ff_override), sin widget.
-    # Los date_input leen el valor inicial de esas keys en cada rerun.
+    # Solución robusta: un ÚNICO date_input de rango nativo (tuple de 2 dates).
+    # Los botones rápidos usan selectbox de preset → no tocan ninguna key
+    # de widget activo, eliminando completamente el StreamlitAPIException.
 
-    _hoy = pd.Timestamp.today().date()
-
-    # Botones de acceso rápido ANTES de los widgets (escriben keys auxiliares)
     st.markdown("**Rango de creación**")
-    _fc1, _fc2, _fc3, _fc4 = st.columns(4)
-    if _fc1.button("7d",   use_container_width=True, key="btn_7d"):
-        st.session_state["_fi_override"] = _hoy - pd.Timedelta(days=7)
-        st.session_state["_ff_override"] = _hoy
-    if _fc2.button("30d",  use_container_width=True, key="btn_30d"):
-        st.session_state["_fi_override"] = _hoy - pd.Timedelta(days=30)
-        st.session_state["_ff_override"] = _hoy
-    if _fc3.button("90d",  use_container_width=True, key="btn_90d"):
-        st.session_state["_fi_override"] = _hoy - pd.Timedelta(days=90)
-        st.session_state["_ff_override"] = _hoy
-    if _fc4.button("Todo", use_container_width=True, key="btn_todo"):
-        st.session_state["_fi_override"] = ops["fecha_min"]
-        st.session_state["_ff_override"] = ops["fecha_max"]
 
-    # Leer valores iniciales desde la key auxiliar (si existe) o usar defaults
-    _v_ini = st.session_state.get("_fi_override", ops["fecha_min"])
-    _v_fin = st.session_state.get("_ff_override", ops["fecha_max"])
+    # Preset rápido: selectbox simple, sin conflicto de session_state
+    _hoy   = datetime.date.today()
+    _presets = {
+        "Rango personalizado": None,
+        "Últimos 7 días":      ((_hoy - datetime.timedelta(days=7)),   _hoy),
+        "Últimos 30 días":     ((_hoy - datetime.timedelta(days=30)),  _hoy),
+        "Últimos 90 días":     ((_hoy - datetime.timedelta(days=90)),  _hoy),
+        "Todo el histórico":   (ops["fecha_min"], ops["fecha_max"]),
+    }
+    _preset_sel = st.selectbox(
+        "Acceso rápido", list(_presets.keys()),
+        key="f_fecha_preset", label_visibility="collapsed",
+    )
 
-    # date_input con keys propias (nunca las mismas que las auxiliares)
-    _col_fi, _col_ff = st.columns(2)
-    with _col_fi:
-        fecha_ini = st.date_input("Desde", value=_v_ini,
-                                  min_value=ops["fecha_min"],
-                                  max_value=ops["fecha_max"],
-                                  key="f_fecha_ini")
-    with _col_ff:
-        fecha_fin = st.date_input("Hasta", value=_v_fin,
-                                  min_value=ops["fecha_min"],
-                                  max_value=ops["fecha_max"],
-                                  key="f_fecha_fin")
+    # Determinar valor inicial del rango
+    if _presets[_preset_sel] is not None:
+        _rango_default = _presets[_preset_sel]
+    else:
+        _rango_default = (ops["fecha_min"], ops["fecha_max"])
 
-    # Sincronizar: si el usuario mueve el widget manualmente, limpiar override
-    # para que la próxima carga use el valor del widget, no el del botón
-    if fecha_ini != st.session_state.get("_fi_override", fecha_ini):
-        st.session_state.pop("_fi_override", None)
-    if fecha_fin != st.session_state.get("_ff_override", fecha_fin):
-        st.session_state.pop("_ff_override", None)
+    # UN solo date_input de rango — tipo nativo de Streamlit, sin keys auxiliares
+    _rango = st.date_input(
+        "Rango de fechas",
+        value=_rango_default,
+        min_value=ops["fecha_min"],
+        max_value=ops["fecha_max"],
+        key="f_fechas",
+        label_visibility="collapsed",
+        format="DD/MM/YYYY",
+    )
+
+    # Desempaquetar con seguridad (el usuario puede seleccionar solo 1 fecha)
+    if isinstance(_rango, (list, tuple)) and len(_rango) == 2:
+        fecha_ini, fecha_fin = _rango[0], _rango[1]
+    elif isinstance(_rango, (list, tuple)) and len(_rango) == 1:
+        fecha_ini = fecha_fin = _rango[0]
+    else:
+        fecha_ini = fecha_fin = _rango  # date suelto
 
     # ── Días de resolución ───────────────────────────────────────────────────
     dias_sel = st.slider(
