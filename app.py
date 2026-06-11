@@ -146,7 +146,9 @@ tiene_agente = "AGENTE" in df.columns
 FILTER_KEYS = [
     "f_grupos", "f_agentes_inc", "f_agentes_exc",
     "f_prioridades", "f_origenes",
-    "f_fechas", "f_dias", "f_busqueda",
+    "f_fecha_ini", "f_fecha_fin",       # date_input keys
+    "_fi_override", "_ff_override",     # keys auxiliares de botones rápidos
+    "f_dias", "f_busqueda",
     "f_ocultar_inactivos",
 ]
 
@@ -243,34 +245,52 @@ with st.sidebar:
     )
 
     # ── Rango de fechas ──────────────────────────────────────────────────────
+    # REGLA STREAMLIT: no se puede asignar session_state a una key que ya
+    # tiene un widget activo (StreamlitAPIException). Solución: los botones
+    # escriben en keys AUXILIARES (_fi_override, _ff_override), sin widget.
+    # Los date_input leen el valor inicial de esas keys en cada rerun.
+
+    _hoy = pd.Timestamp.today().date()
+
+    # Botones de acceso rápido ANTES de los widgets (escriben keys auxiliares)
     st.markdown("**Rango de creación**")
+    _fc1, _fc2, _fc3, _fc4 = st.columns(4)
+    if _fc1.button("7d",   use_container_width=True, key="btn_7d"):
+        st.session_state["_fi_override"] = _hoy - pd.Timedelta(days=7)
+        st.session_state["_ff_override"] = _hoy
+    if _fc2.button("30d",  use_container_width=True, key="btn_30d"):
+        st.session_state["_fi_override"] = _hoy - pd.Timedelta(days=30)
+        st.session_state["_ff_override"] = _hoy
+    if _fc3.button("90d",  use_container_width=True, key="btn_90d"):
+        st.session_state["_fi_override"] = _hoy - pd.Timedelta(days=90)
+        st.session_state["_ff_override"] = _hoy
+    if _fc4.button("Todo", use_container_width=True, key="btn_todo"):
+        st.session_state["_fi_override"] = ops["fecha_min"]
+        st.session_state["_ff_override"] = ops["fecha_max"]
+
+    # Leer valores iniciales desde la key auxiliar (si existe) o usar defaults
+    _v_ini = st.session_state.get("_fi_override", ops["fecha_min"])
+    _v_fin = st.session_state.get("_ff_override", ops["fecha_max"])
+
+    # date_input con keys propias (nunca las mismas que las auxiliares)
     _col_fi, _col_ff = st.columns(2)
     with _col_fi:
-        fecha_ini = st.date_input("Desde", value=ops["fecha_min"],
+        fecha_ini = st.date_input("Desde", value=_v_ini,
                                   min_value=ops["fecha_min"],
                                   max_value=ops["fecha_max"],
                                   key="f_fecha_ini")
     with _col_ff:
-        fecha_fin = st.date_input("Hasta", value=ops["fecha_max"],
+        fecha_fin = st.date_input("Hasta", value=_v_fin,
                                   min_value=ops["fecha_min"],
                                   max_value=ops["fecha_max"],
                                   key="f_fecha_fin")
 
-    # Accesos rápidos de fecha
-    _hoy = pd.Timestamp.today().date()
-    _fc1, _fc2, _fc3 = st.columns(3)
-    if _fc1.button("7d",  use_container_width=True, key="btn_7d"):
-        st.session_state.f_fecha_ini = _hoy - pd.Timedelta(days=7)
-        st.session_state.f_fecha_fin = _hoy
-        st.rerun()
-    if _fc2.button("30d", use_container_width=True, key="btn_30d"):
-        st.session_state.f_fecha_ini = _hoy - pd.Timedelta(days=30)
-        st.session_state.f_fecha_fin = _hoy
-        st.rerun()
-    if _fc3.button("90d", use_container_width=True, key="btn_90d"):
-        st.session_state.f_fecha_ini = _hoy - pd.Timedelta(days=90)
-        st.session_state.f_fecha_fin = _hoy
-        st.rerun()
+    # Sincronizar: si el usuario mueve el widget manualmente, limpiar override
+    # para que la próxima carga use el valor del widget, no el del botón
+    if fecha_ini != st.session_state.get("_fi_override", fecha_ini):
+        st.session_state.pop("_fi_override", None)
+    if fecha_fin != st.session_state.get("_ff_override", fecha_fin):
+        st.session_state.pop("_ff_override", None)
 
     # ── Días de resolución ───────────────────────────────────────────────────
     dias_sel = st.slider(
