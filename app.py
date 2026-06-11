@@ -147,8 +147,8 @@ tiene_agente = "AGENTE" in df.columns
 FILTER_KEYS = [
     "f_grupos", "f_agentes_inc", "f_agentes_exc",
     "f_prioridades", "f_origenes",
-    "f_fechas",          # date_input de rango
-    "_fecha_default",    # key auxiliar de presets
+    "_f_año_ini", "_f_mes_ini",   # selectboxes de fecha inicio
+    "_f_año_fin", "_f_mes_fin",   # selectboxes de fecha fin
     "f_dias", "f_busqueda",
     "f_ocultar_inactivos",
 ]
@@ -246,61 +246,83 @@ with st.sidebar:
     )
 
     # ── Rango de fechas ──────────────────────────────────────────────────────
-    # Solución definitiva: NUNCA pasar value= dinámico a date_input.
-    # La key se inicializa en session_state ANTES del widget.
-    # Streamlit usa ese valor como default solo si la key no existe todavía.
-    # Los presets reinician la key y hacen rerun → el widget la recoge limpia.
+    # Implementación con selectbox de año/mes — 100% libre de errores de tipo.
+    # date_input genera StreamlitAPIException en Streamlit Cloud con Python 3.13
+    # cuando se intenta modificar su value programáticamente.
+    # selectbox solo maneja strings/ints simples → cero conflictos.
 
     st.markdown("**Rango de creación**")
     _hoy = datetime.date.today()
 
-    # Botones de preset — cada uno escribe la key Y llama st.rerun()
-    # IMPORTANTE: pop("f_fechas") elimina el valor anterior ANTES de recrear
-    # el widget, así Streamlit usa el nuevo valor como default sin conflicto.
+    # Construir listas de años y meses disponibles en el dataset
+    _años    = sorted({ops["fecha_min"].year, ops["fecha_max"].year} |
+                      set(range(ops["fecha_min"].year, ops["fecha_max"].year + 1)))
+    _meses   = list(range(1, 13))
+    _nom_mes = ["Ene","Feb","Mar","Abr","May","Jun",
+                "Jul","Ago","Sep","Oct","Nov","Dic"]
+
+    # Accesos rápidos — solo modifican session_state con strings simples
     _pc1, _pc2, _pc3, _pc4 = st.columns(4)
+
+    def _set_rango(ini: datetime.date, fin: datetime.date):
+        st.session_state["_f_año_ini"]  = ini.year
+        st.session_state["_f_mes_ini"]  = ini.month
+        st.session_state["_f_año_fin"]  = fin.year
+        st.session_state["_f_mes_fin"]  = fin.month
+
     if _pc1.button("7d",   use_container_width=True, key="btn_7d"):
-        st.session_state.pop("f_fechas", None)
-        st.session_state["_fecha_default"] = (
-            _hoy - datetime.timedelta(days=7), _hoy)
-        st.rerun()
+        _set_rango(_hoy - datetime.timedelta(days=7), _hoy)
     if _pc2.button("30d",  use_container_width=True, key="btn_30d"):
-        st.session_state.pop("f_fechas", None)
-        st.session_state["_fecha_default"] = (
-            _hoy - datetime.timedelta(days=30), _hoy)
-        st.rerun()
+        _set_rango(_hoy - datetime.timedelta(days=30), _hoy)
     if _pc3.button("90d",  use_container_width=True, key="btn_90d"):
-        st.session_state.pop("f_fechas", None)
-        st.session_state["_fecha_default"] = (
-            _hoy - datetime.timedelta(days=90), _hoy)
-        st.rerun()
+        _set_rango(_hoy - datetime.timedelta(days=90), _hoy)
     if _pc4.button("Todo", use_container_width=True, key="btn_todo"):
-        st.session_state.pop("f_fechas", None)
-        st.session_state["_fecha_default"] = (
-            ops["fecha_min"], ops["fecha_max"])
-        st.rerun()
+        _set_rango(ops["fecha_min"], ops["fecha_max"])
 
-    # Inicializar key con default si aún no existe (primera carga o tras limpiar)
-    if "f_fechas" not in st.session_state:
-        _def = st.session_state.pop("_fecha_default",
-                                    (ops["fecha_min"], ops["fecha_max"]))
-        st.session_state["f_fechas"] = _def
+    # Valores por defecto (primera carga)
+    _def_año_ini = st.session_state.get("_f_año_ini", ops["fecha_min"].year)
+    _def_mes_ini = st.session_state.get("_f_mes_ini", ops["fecha_min"].month)
+    _def_año_fin = st.session_state.get("_f_año_fin", ops["fecha_max"].year)
+    _def_mes_fin = st.session_state.get("_f_mes_fin", ops["fecha_max"].month)
 
-    # date_input de rango — value viene de session_state, NUNCA de variable dinámica
-    _rango = st.date_input(
-        "Rango de creación",
-        min_value=ops["fecha_min"],
-        max_value=ops["fecha_max"],
-        key="f_fechas",
-        label_visibility="collapsed",
-    )
+    # Selectboxes de año y mes — widgets simples, sin problemas de tipo
+    _ci1, _ci2, _cf1, _cf2 = st.columns(4)
+    with _ci1:
+        _año_ini = st.selectbox("Año ini", _años,
+                                index=_años.index(_def_año_ini)
+                                      if _def_año_ini in _años else 0,
+                                key="_f_año_ini", label_visibility="collapsed")
+    with _ci2:
+        _mes_ini = st.selectbox("Mes ini",
+                                _meses,
+                                index=_def_mes_ini - 1,
+                                format_func=lambda m: _nom_mes[m-1],
+                                key="_f_mes_ini", label_visibility="collapsed")
+    with _cf1:
+        _año_fin = st.selectbox("Año fin", _años,
+                                index=_años.index(_def_año_fin)
+                                      if _def_año_fin in _años else len(_años)-1,
+                                key="_f_año_fin", label_visibility="collapsed")
+    with _cf2:
+        _mes_fin = st.selectbox("Mes fin",
+                                _meses,
+                                index=_def_mes_fin - 1,
+                                format_func=lambda m: _nom_mes[m-1],
+                                key="_f_mes_fin", label_visibility="collapsed")
 
-    # Desempaquetar con seguridad
-    if isinstance(_rango, (list, tuple)) and len(_rango) == 2:
-        fecha_ini, fecha_fin = _rango[0], _rango[1]
-    elif isinstance(_rango, (list, tuple)) and len(_rango) == 1:
-        fecha_ini = fecha_fin = _rango[0]
-    else:
-        fecha_ini = fecha_fin = _rango
+    # Etiqueta descriptiva del rango seleccionado
+    st.caption(f"📅 {_nom_mes[_mes_ini-1]} {_año_ini} → {_nom_mes[_mes_fin-1]} {_año_fin}")
+
+    # Construir fechas exactas desde los selectboxes
+    import calendar
+    _ult_dia_ini = calendar.monthrange(_año_ini, _mes_ini)[1]
+    _ult_dia_fin = calendar.monthrange(_año_fin, _mes_fin)[1]
+    fecha_ini = datetime.date(_año_ini, _mes_ini, 1)
+    fecha_fin = datetime.date(_año_fin, _mes_fin, _ult_dia_fin)
+
+    # Proteger inversión de rango
+    if fecha_ini > fecha_fin:
+        fecha_ini, fecha_fin = fecha_fin, fecha_ini
 
     # ── Días de resolución ───────────────────────────────────────────────────
     dias_sel = st.slider(
