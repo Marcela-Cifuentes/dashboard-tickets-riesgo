@@ -48,7 +48,10 @@ import numpy as np
 import pandas as pd
 from nltk.corpus import stopwords
 from scipy.sparse import hstack
+from sklearn.decomposition import TruncatedSVD
 from sklearn.ensemble import IsolationForest
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.preprocessing import OrdinalEncoder, StandardScaler
 
 log = logging.getLogger(__name__)
 
@@ -433,6 +436,93 @@ def procesar_base(nombre_base: str) -> pd.DataFrame:
     log.info("=== Base '%s' procesada: %d filas ===", nombre_base, len(df))
     return df
 
+
+
+# ═══════════════════════════════════════════════════════════════
+# CLASES DEL MODELO MEJORADO
+# Definidas aquí (pipeline.py) para que joblib.load pueda
+# deserializarlas independientemente de dónde se ejecute la app.
+# ═══════════════════════════════════════════════════════════════
+
+SVD_COMPONENTES  = 150
+COLS_MODEL_TEXT  = "TEXTO_LIMPIO"
+COLS_MODEL_CAT   = ["PRIORIDAD", "GRUPO", "ORIGEN"]
+COLS_MODEL_NUM   = [
+    "HORA_CREACION", "DIA_SEMANA", "MES_CREACION",
+    "ES_FIN_SEMANA", "ES_HORA_PICO",
+    "SCORE_SENT_FILL", "FLAG_URGENCIA", "FLAG_CONFLICTO",
+    "HIST_AGENTE_AVG_DIAS",
+]
+
+
+class PreprocesadorDenso:
+    """TF-IDF → SVD (densa) + OrdinalEncoder + StandardScaler → np.hstack."""
+
+    def __init__(self, max_features: int = 12_000,
+                 ngram_range: tuple = (1, 2),
+                 svd_n: int = SVD_COMPONENTES,
+                 random_state: int = 42):
+        self.tfidf   = TfidfVectorizer(max_features=max_features,
+                                       ngram_range=ngram_range,
+                                       sublinear_tf=True, min_df=2,
+                                       strip_accents="unicode")
+        self.svd     = TruncatedSVD(n_components=svd_n,
+                                    random_state=random_state)
+        self.encoder = OrdinalEncoder(handle_unknown="use_encoded_value",
+                                      unknown_value=-1)
+        self.scaler  = StandardScaler()
+
+    @staticmethod
+    def _prep_texto(X: pd.DataFrame) -> pd.Series:
+        return X[COLS_MODEL_TEXT].astype(object).fillna("").astype(str)
+
+    @staticmethod
+    def _prep_cat(X: pd.DataFrame) -> pd.DataFrame:
+        return (X[COLS_MODEL_CAT]
+                .astype(object)
+                .fillna("desconocido")
+                .astype(str))
+
+    @staticmethod
+    def _prep_num(X: pd.DataFrame) -> pd.DataFrame:
+        return (X[COLS_MODEL_NUM]
+                .apply(pd.to_numeric, errors="coerce")
+                .fillna(0)
+                .astype(float))
+
+    def fit(self, X: pd.DataFrame, y=None):
+        tfidf_mat = self.tfidf.fit_transform(self._prep_texto(X))
+        self.svd.fit(tfidf_mat)
+        self.encoder.fit(self._prep_cat(X))
+        self.scaler.fit(self._prep_num(X))
+        return self
+
+    def transform(self, X: pd.DataFrame) -> np.ndarray:
+        svd_mat = self.svd.transform(self.tfidf.transform(self._prep_texto(X)))
+        cat_mat = self.encoder.transform(self._prep_cat(X))
+        num_mat = self.scaler.transform(self._prep_num(X))
+        return np.hstack([svd_mat, cat_mat, num_mat])
+
+    def fit_transform(self, X: pd.DataFrame, y=None) -> np.ndarray:
+        return self.fit(X, y).transform(X)
+
+
+class ModeloPipeline:
+    """Wrapper PreprocesadorDenso + HistGBM serializable con joblib."""
+
+    def __init__(self, prep: "PreprocesadorDenso", clf):
+        self.prep = prep
+        self.clf  = clf
+
+    def fit(self, X: pd.DataFrame, y):
+        self.clf.fit(self.prep.fit_transform(X), y)
+        return self
+
+    def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
+        return self.clf.predict_proba(self.prep.transform(X))
+
+    def predict(self, X: pd.DataFrame) -> np.ndarray:
+        return self.clf.predict(self.prep.transform(X))
 
 # ═══════════════════════════════════════════════════════════════
 # PREDICCIÓN CON MODELO MEJORADO (v2)

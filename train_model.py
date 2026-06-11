@@ -127,99 +127,13 @@ def construir_features(df: pd.DataFrame) -> pd.DataFrame:
 # PREPROCESADOR MANUAL (evita sparse en HistGBM)
 # ═══════════════════════════════════════════════
 
-class PreprocesadorDenso:
-    """
-    Transforma el DataFrame en una matriz numpy densa lista para HistGBM.
-
-    Texto  → TF-IDF → TruncatedSVD (LSA) → densa [n, SVD_COMPONENTES]
-    Cat    → OrdinalEncoder              → densa [n, len(COLS_CAT)]
-    Num    → StandardScaler              → densa [n, len(COLS_NUM)]
-    Todo   → np.hstack                  → densa [n, SVD+CAT+NUM]
-    """
-
-    def __init__(self, max_features=12_000, ngram_range=(1, 2),
-                 svd_n=SVD_COMPONENTES):
-        self.tfidf   = TfidfVectorizer(max_features=max_features,
-                                       ngram_range=ngram_range,
-                                       sublinear_tf=True, min_df=2,
-                                       strip_accents="unicode")
-        self.svd     = TruncatedSVD(n_components=svd_n,
-                                    random_state=RANDOM_STATE)
-        self.encoder = OrdinalEncoder(handle_unknown="use_encoded_value",
-                                      unknown_value=-1)
-        self.scaler  = StandardScaler()
-
-    @staticmethod
-    def _prep_cat(X: pd.DataFrame) -> pd.DataFrame:
-        """Manejo robusto de columnas category en pandas 2.x.
-
-        Orden obligatorio: astype(object) → fillna → astype(str)
-        Razones:
-          - astype(str) directo NO convierte NaN a string en pandas 2.x
-          - fillna sobre dtype category falla si el valor no es categoría registrada
-          - astype(object) elimina el dtype category y libera ambas restricciones
-        """
-        return (X[COLS_CAT]
-                .astype(object)          # elimina dtype category → Python nativo
-                .fillna("desconocido")   # ahora acepta cualquier string
-                .astype(str))            # convierte todo a str puro
-
-    @staticmethod
-    def _prep_texto(X: pd.DataFrame) -> pd.Series:
-        return X[COLS_TEXT].astype(object).fillna("").astype(str)
-
-    @staticmethod
-    def _prep_num(X: pd.DataFrame) -> pd.DataFrame:
-        # pd.to_numeric convierte cualquier tipo (incluido category) a float
-        # y coerce fuerza NaN en valores no numéricos → luego fillna(0)
-        return (X[COLS_NUM]
-                .apply(pd.to_numeric, errors="coerce")
-                .fillna(0)
-                .astype(float))
-
-    def fit(self, X: pd.DataFrame, y=None):
-        tfidf_mat = self.tfidf.fit_transform(self._prep_texto(X))
-        self.svd.fit(tfidf_mat)
-        self.encoder.fit(self._prep_cat(X))
-        self.scaler.fit(self._prep_num(X))
-        return self
-
-    def transform(self, X: pd.DataFrame) -> np.ndarray:
-        svd_mat = self.svd.transform(self.tfidf.transform(self._prep_texto(X)))
-        cat_mat = self.encoder.transform(self._prep_cat(X))
-        num_mat = self.scaler.transform(self._prep_num(X))
-
-        return np.hstack([svd_mat, cat_mat, num_mat])                 # 100% densa ✅
-
-    def fit_transform(self, X: pd.DataFrame, y=None) -> np.ndarray:
-        return self.fit(X, y).transform(X)
-
-
-# ═══════════════════════════════════════════════
-# PIPELINE COMPLETO
-# ═══════════════════════════════════════════════
-
-class ModeloPipeline:
-    """
-    Wrapper que une PreprocesadorDenso + HistGBM en un objeto compatible
-    con scikit-learn (predict_proba, fit) y serializable con joblib.
-    """
-
-    def __init__(self, prep: PreprocesadorDenso,
-                 clf: HistGradientBoostingClassifier):
-        self.prep = prep
-        self.clf  = clf
-
-    def fit(self, X: pd.DataFrame, y):
-        X_dense = self.prep.fit_transform(X)
-        self.clf.fit(X_dense, y)
-        return self
-
-    def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
-        return self.clf.predict_proba(self.prep.transform(X))
-
-    def predict(self, X: pd.DataFrame) -> np.ndarray:
-        return self.clf.predict(self.prep.transform(X))
+# PreprocesadorDenso y ModeloPipeline definidas en pipeline.py
+# para que joblib.load funcione correctamente en cualquier entorno.
+from pipeline import (PreprocesadorDenso, ModeloPipeline,
+                      COLS_MODEL_TEXT as COLS_TEXT,
+                      COLS_MODEL_CAT  as COLS_CAT,
+                      COLS_MODEL_NUM  as COLS_NUM,
+                      SVD_COMPONENTES)
 
 
 # ═══════════════════════════════════════════════

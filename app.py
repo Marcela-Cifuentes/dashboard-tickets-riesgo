@@ -984,105 +984,321 @@ with tab6:
 
 
 # ══════════════════════════════════════════
-# TAB 7 — EXPERIENCIA USUARIO
+# TAB 7 — EXPERIENCIA USUARIO (mejorado)
 # ══════════════════════════════════════════
 
 with tab7:
     st.header("Experiencia del usuario y sentimiento")
 
+    # — Badge del modelo activo —
     try:
         import pysentimiento  # noqa
-        st.success("Modelo de sentimiento activo: 🤖 **BETO** (transformer entrenado en español)")
+        st.success("Modelo activo: 🤖 **BETO** — transformer entrenado en español")
     except ImportError:
-        st.info("Modelo activo: 📖 **Léxico español** (instala `pysentimiento` para BETO)")
+        st.info("Modelo activo: 📖 **Léxico español** — instala `pysentimiento` para BETO")
 
-    if "SCORE_SENTIMIENTO" in df_filtrado.columns:
-        _pct_neg = round((df_filtrado["SENTIMIENTO"]=="Negativo").mean()*100, 1)
-        _pct_pos = round((df_filtrado["SENTIMIENTO"]=="Positivo").mean()*100, 1)
-        _score_m = round(df_filtrado["SCORE_SENTIMIENTO"].mean(), 3)
-        k1,k2,k3 = st.columns(3)
-        k1.metric("% Negativos",  f"{_pct_neg}%")
-        k2.metric("% Positivos",  f"{_pct_pos}%")
-        k3.metric("Score medio", _score_m,
-                  help="-1 muy negativo → +1 muy positivo")
+    # ── KPIs de experiencia ───────────────────────────────────────────────────
+    _tiene_score = "SCORE_SENTIMIENTO" in df_filtrado.columns
+    _pct_neg  = round((df_filtrado["SENTIMIENTO"] == "Negativo").mean() * 100, 1)
+    _pct_pos  = round((df_filtrado["SENTIMIENTO"] == "Positivo").mean() * 100, 1)
+    _pct_urg  = round((df_filtrado["URGENCIA"]    == "🔥 Alta urgencia").mean() * 100, 1)
+    _pct_conf = round((df_filtrado["CONFLICTO"]   == "⚠️ Conflictivo").mean() * 100, 1)                 if "CONFLICTO" in df_filtrado.columns else 0
+    _score_m  = round(df_filtrado["SCORE_SENTIMIENTO"].mean(), 3) if _tiene_score else 0
 
-    st.subheader("Distribución de sentimiento")
-    st.plotly_chart(
-        px.pie(df_filtrado, names="SENTIMIENTO", color="SENTIMIENTO",
-               color_discrete_map=SENTIMENT_COLORS),
-        use_container_width=True,
-    )
+    k1, k2, k3, k4, k5 = st.columns(5)
+    k1.metric("😟 Negativos",   f"{_pct_neg}%",
+              help="Tickets con sentimiento negativo")
+    k2.metric("😊 Positivos",   f"{_pct_pos}%")
+    k3.metric("🔥 Urgentes",    f"{_pct_urg}%",
+              help="Tickets con lenguaje de urgencia")
+    k4.metric("⚠️ Conflictivos", f"{_pct_conf}%",
+              help="Tickets con lenguaje de conflicto o queja reiterada")
+    k5.metric("Score medio",    _score_m,
+              help="-1 muy negativo → +1 muy positivo")
 
-    if "SCORE_SENTIMIENTO" in df_filtrado.columns:
-        st.plotly_chart(
-            px.histogram(df_filtrado, x="SCORE_SENTIMIENTO", nbins=40,
-                         color="SENTIMIENTO", color_discrete_map=SENTIMENT_COLORS,
-                         title="Score continuo de sentimiento"),
-            use_container_width=True,
-        )
+    # Semáforo de experiencia
+    if _pct_neg > 40:
+        st.error("🔴 Experiencia crítica — más del 40% de tickets son negativos")
+    elif _pct_neg > 20:
+        st.warning("🟡 Experiencia en riesgo — revisar tickets negativos")
+    else:
+        st.success("🟢 Experiencia del usuario estable")
 
     st.divider()
-    st.subheader("Urgencia detectada")
-    st.plotly_chart(
-        px.pie(df_filtrado, names="URGENCIA"), use_container_width=True,
-    )
 
-    sent_g = (df_filtrado.groupby(["GRUPO","SENTIMIENTO"], observed=True)
-              .size().reset_index(name="Tickets"))
-    st.subheader("Sentimiento por grupo")
-    st.plotly_chart(
-        px.bar(sent_g, x="GRUPO", y="Tickets", color="SENTIMIENTO",
-               barmode="stack", color_discrete_map=SENTIMENT_COLORS),
-        use_container_width=True,
-    )
+    # ── Subtabs internos ─────────────────────────────────────────────────────
+    _st1, _st2, _st3, _st4, _st5 = st.tabs([
+        "📊 Sentimiento",
+        "🎫 Ver tickets",
+        "🔥 Urgencia & Conflicto",
+        "👥 Por agente/grupo",
+        "🔁 Incidentes recurrentes",
+    ])
 
-    if tiene_agente:
-        sent_a = (df_filtrado.groupby(["AGENTE","SENTIMIENTO"], observed=True)
-                  .size().reset_index(name="Tickets"))
-        st.subheader("Sentimiento por agente")
+    # ── SUBTAB 1: Sentimiento general ────────────────────────────────────────
+    with _st1:
+        _colA, _colB = st.columns(2)
+        with _colA:
+            st.plotly_chart(
+                px.pie(df_filtrado, names="SENTIMIENTO", color="SENTIMIENTO",
+                       color_discrete_map=SENTIMENT_COLORS,
+                       title="Distribución de sentimiento"),
+                use_container_width=True,
+            )
+        with _colB:
+            _evol = (df_filtrado
+                     .assign(MES=df_filtrado["CREACION"].dt.to_period("M").astype(str))
+                     .groupby(["MES","SENTIMIENTO"], observed=True).size()
+                     .reset_index(name="Tickets"))
+            st.plotly_chart(
+                px.line(_evol, x="MES", y="Tickets", color="SENTIMIENTO",
+                        color_discrete_map=SENTIMENT_COLORS, markers=True,
+                        title="Evolución mensual de sentimiento"),
+                use_container_width=True,
+            )
+
+        if _tiene_score:
+            st.plotly_chart(
+                px.histogram(df_filtrado, x="SCORE_SENTIMIENTO", nbins=40,
+                             color="SENTIMIENTO", color_discrete_map=SENTIMENT_COLORS,
+                             title="Distribución del score continuo (-1 negativo → +1 positivo)"),
+                use_container_width=True,
+            )
+            # Dispersión sentimiento vs días de resolución
+            st.plotly_chart(
+                px.scatter(df_filtrado.sample(min(2000, len(df_filtrado))),
+                           x="DIAS", y="SCORE_SENTIMIENTO",
+                           color="SENTIMIENTO", color_discrete_map=SENTIMENT_COLORS,
+                           opacity=0.5, trendline="ols",
+                           title="¿Más días de espera = peor sentimiento?",
+                           labels={"DIAS": "Días de resolución",
+                                   "SCORE_SENTIMIENTO": "Score sentimiento"}),
+                use_container_width=True,
+            )
+
+    # ── SUBTAB 2: Ver ticket completo ────────────────────────────────────────
+    with _st2:
+        st.subheader("🎫 Explorador de tickets")
+
+        # Filtros rápidos dentro del subtab
+        _fc1, _fc2, _fc3 = st.columns(3)
+        _sent_fil = _fc1.multiselect(
+            "Sentimiento", ["Positivo","Neutro","Negativo"],
+            default=["Negativo"], key="eu_sent_fil",
+        )
+        _urg_fil = _fc2.selectbox(
+            "Urgencia", ["Todos","🔥 Alta urgencia","Normal"],
+            key="eu_urg_fil",
+        )
+        _ord_fil = _fc3.selectbox(
+            "Ordenar por",
+            ["Score ↑ (más negativos primero)", "Días ↓ (más lentos)", "Recientes"],
+            key="eu_ord_fil",
+        )
+
+        _df_vis = df_filtrado.copy()
+        if _sent_fil:
+            _df_vis = _df_vis[_df_vis["SENTIMIENTO"].isin(_sent_fil)]
+        if _urg_fil != "Todos":
+            _df_vis = _df_vis[_df_vis["URGENCIA"] == _urg_fil]
+
+        if _ord_fil.startswith("Score") and _tiene_score:
+            _df_vis = _df_vis.sort_values("SCORE_SENTIMIENTO", ascending=True)
+        elif _ord_fil.startswith("Días"):
+            _df_vis = _df_vis.sort_values("DIAS", ascending=False)
+        else:
+            _df_vis = _df_vis.sort_values("CREACION", ascending=False)
+
+        st.caption(f"Mostrando {len(_df_vis):,} tickets")
+
+        if _df_vis.empty:
+            st.info("No hay tickets con estos filtros.")
+        else:
+            # Tabla resumen clicable
+            _cols_tabla = [c for c in
+                ["TICKET_ID","TICKET_ASUNTO","GRUPO","AGENTE",
+                 "PRIORIDAD","DIAS","SENTIMIENTO","URGENCIA","SCORE_SENTIMIENTO"]
+                if c in _df_vis.columns]
+
+            _sel = st.dataframe(
+                _df_vis[_cols_tabla].reset_index(drop=True),
+                use_container_width=True,
+                on_select="rerun",
+                selection_mode="single-row",
+                key="tabla_tickets_eu",
+            )
+
+            # Vista de ticket completo al seleccionar una fila
+            if _sel and _sel.selection and _sel.selection.rows:
+                _idx = _sel.selection.rows[0]
+                _ticket = _df_vis.iloc[_idx]
+
+                st.divider()
+                st.subheader(f"🎫 Ticket: {_ticket.get('TICKET_ID', 'N/D')}")
+
+                # Cabecera con métricas del ticket
+                _tc1, _tc2, _tc3, _tc4 = st.columns(4)
+                _tc1.metric("Estado",    str(_ticket.get("TICKET_ESTADO","N/D")))
+                _tc2.metric("Prioridad", str(_ticket.get("PRIORIDAD","N/D")))
+                _tc3.metric("Días",      str(_ticket.get("DIAS","N/D")))
+                _tc4.metric("SLA",       str(_ticket.get("ESTADO_SLA","N/D")))
+
+                _ta1, _ta2 = st.columns(2)
+                _ta1.info(f"👤 **Agente:** {_ticket.get('AGENTE','N/D')}")
+                _ta2.info(f"👥 **Grupo:** {_ticket.get('GRUPO','N/D')}")
+
+                # Badges de sentimiento y urgencia
+                _badge_sent = {
+                    "Positivo": "🟢 Positivo",
+                    "Neutro":   "🔵 Neutro",
+                    "Negativo": "🔴 Negativo",
+                }.get(str(_ticket.get("SENTIMIENTO","")), "⚪ N/D")
+
+                _badge_urg = "🔥 Alta urgencia" if _ticket.get("URGENCIA") == "🔥 Alta urgencia" else "✅ Normal"
+                _badge_conf = "⚠️ Conflictivo" if _ticket.get("CONFLICTO","") == "⚠️ Conflictivo" else ""
+
+                _tb1, _tb2, _tb3 = st.columns(3)
+                _tb1.markdown(f"**Sentimiento:** {_badge_sent}")
+                _tb2.markdown(f"**Urgencia:** {_badge_urg}")
+                if _badge_conf:
+                    _tb3.markdown(f"**Conflicto:** {_badge_conf}")
+
+                # Asunto y descripción completa
+                if "TICKET_ASUNTO" in _ticket.index:
+                    st.markdown("**📌 Asunto:**")
+                    st.markdown(f"> {_ticket['TICKET_ASUNTO']}")
+
+                if "TICKET_DESCRIPCION" in _ticket.index:
+                    st.markdown("**📝 Descripción completa:**")
+                    with st.container(border=True):
+                        st.write(str(_ticket["TICKET_DESCRIPCION"]))
+
+                # Score de sentimiento con barra visual
+                if _tiene_score and "SCORE_SENTIMIENTO" in _ticket.index:
+                    _sc = float(_ticket["SCORE_SENTIMIENTO"])
+                    _sc_norm = (_sc + 1) / 2   # escalar de [-1,1] a [0,1]
+                    st.markdown("**Score de sentimiento:**")
+                    st.progress(_sc_norm,
+                                text=f"{_sc:+.3f} ({'Positivo' if _sc > 0.05 else 'Negativo' if _sc < -0.05 else 'Neutro'})")
+
+                # Fechas
+                _fd1, _fd2 = st.columns(2)
+                if "CREACION" in _ticket.index:
+                    _fd1.markdown(f"**📅 Creado:** {str(_ticket['CREACION'])[:10]}")
+                if "FECHA_RESPUESTA" in _ticket.index:
+                    _fd2.markdown(f"**✅ Respondido:** {str(_ticket['FECHA_RESPUESTA'])[:10]}")
+            else:
+                st.caption("👆 Haz clic en una fila para ver el ticket completo")
+
+    # ── SUBTAB 3: Urgencia y conflicto ───────────────────────────────────────
+    with _st3:
+        _u1, _u2 = st.columns(2)
+        with _u1:
+            st.plotly_chart(
+                px.pie(df_filtrado, names="URGENCIA",
+                       title="Tickets con lenguaje de urgencia",
+                       color_discrete_sequence=["#e74c3c","#95a5a6"]),
+                use_container_width=True,
+            )
+        with _u2:
+            if "CONFLICTO" in df_filtrado.columns:
+                st.plotly_chart(
+                    px.pie(df_filtrado, names="CONFLICTO",
+                           title="Tickets con lenguaje de conflicto",
+                           color_discrete_sequence=["#f39c12","#95a5a6"]),
+                    use_container_width=True,
+                )
+
+        # Cruce urgencia × sentimiento
+        _uxs = (df_filtrado.groupby(["URGENCIA","SENTIMIENTO"], observed=True)
+                .size().reset_index(name="Tickets"))
         st.plotly_chart(
-            px.bar(sent_a, x="AGENTE", y="Tickets", color="SENTIMIENTO",
-                   barmode="stack", color_discrete_map=SENTIMENT_COLORS),
+            px.bar(_uxs, x="URGENCIA", y="Tickets", color="SENTIMIENTO",
+                   barmode="stack", color_discrete_map=SENTIMENT_COLORS,
+                   title="Urgencia × Sentimiento"),
             use_container_width=True,
         )
 
-    negativos = df_filtrado[df_filtrado["SENTIMIENTO"]=="Negativo"]
-    st.subheader("Tickets con sentimiento negativo")
-    if negativos.empty:
-        st.success("No hay tickets negativos con los filtros actuales.")
-    else:
-        cols = [c for c in ["TICKET_ID","TICKET_ASUNTO","GRUPO","AGENTE",
-                            "PRIORIDAD","DIAS","SCORE_SENTIMIENTO"]
-                if c in negativos.columns]
-        sort_col = "SCORE_SENTIMIENTO" if "SCORE_SENTIMIENTO" in negativos.columns else "DIAS"
-        st.dataframe(negativos[cols].sort_values(sort_col), use_container_width=True)
-
-    urgentes = df_filtrado[df_filtrado["URGENCIA"]=="🔥 Alta urgencia"]
-    st.subheader("Tickets urgentes")
-    if urgentes.empty:
-        st.success("No hay tickets urgentes.")
-    else:
-        cols = [c for c in ["TICKET_ID","TICKET_ASUNTO","GRUPO","AGENTE","PRIORIDAD","DIAS"]
-                if c in urgentes.columns]
-        st.dataframe(urgentes[cols], use_container_width=True)
-
-    @st.fragment
-    def incidentes_recurrentes(df_filtrado):
-        st.subheader("Incidentes recurrentes")
-        rec = palabras_recurrentes(df_filtrado, 15)
-        if rec.empty:
-            st.info("Sin texto suficiente.")
-            return
-        st.plotly_chart(
-            px.bar(rec, x="Frecuencia", y="Palabra", orientation="h"),
-            use_container_width=True,
-        )
-        pal = st.selectbox("Palabra clave", rec["Palabra"], key="pal_rec")
-        rel = df_filtrado[
-            df_filtrado["TEXTO_COMPLETO"].str.contains(pal, case=False, na=False, regex=False)
+        # Tabla de tickets urgentes Y negativos (los más críticos)
+        _criticos_exp = df_filtrado[
+            (df_filtrado["URGENCIA"] == "🔥 Alta urgencia") &
+            (df_filtrado["SENTIMIENTO"] == "Negativo")
         ]
-        cols = [c for c in ["TICKET_ID","TICKET_ASUNTO","GRUPO","AGENTE","PRIORIDAD"]
-                if c in rel.columns]
-        st.dataframe(rel[cols], use_container_width=True)
+        st.subheader(f"🚨 Tickets urgentes + negativos ({len(_criticos_exp)})")
+        if _criticos_exp.empty:
+            st.success("No hay tickets urgentes con sentimiento negativo.")
+        else:
+            _cols_crit = [c for c in
+                ["TICKET_ID","TICKET_ASUNTO","AGENTE","GRUPO",
+                 "PRIORIDAD","DIAS","SCORE_SENTIMIENTO"]
+                if c in _criticos_exp.columns]
+            st.dataframe(
+                _criticos_exp[_cols_crit].sort_values(
+                    "SCORE_SENTIMIENTO" if _tiene_score else "DIAS"
+                ),
+                use_container_width=True,
+            )
 
-    incidentes_recurrentes(df_filtrado)
+    # ── SUBTAB 4: Por agente y grupo ─────────────────────────────────────────
+    with _st4:
+        sent_g = (df_filtrado.groupby(["GRUPO","SENTIMIENTO"], observed=True)
+                  .size().reset_index(name="Tickets"))
+        st.plotly_chart(
+            px.bar(sent_g, x="GRUPO", y="Tickets", color="SENTIMIENTO",
+                   barmode="stack", color_discrete_map=SENTIMENT_COLORS,
+                   title="Sentimiento por grupo"),
+            use_container_width=True,
+        )
+
+        if tiene_agente:
+            sent_a = (df_filtrado.groupby(["AGENTE","SENTIMIENTO"], observed=True)
+                      .size().reset_index(name="Tickets"))
+            st.plotly_chart(
+                px.bar(sent_a, x="AGENTE", y="Tickets", color="SENTIMIENTO",
+                       barmode="stack", color_discrete_map=SENTIMENT_COLORS,
+                       title="Sentimiento por agente"),
+                use_container_width=True,
+            )
+
+            # Score medio por agente (si disponible)
+            if _tiene_score:
+                _score_ag = (df_filtrado.groupby("AGENTE", observed=True)
+                             ["SCORE_SENTIMIENTO"].mean()
+                             .reset_index(name="Score_medio")
+                             .sort_values("Score_medio"))
+                st.plotly_chart(
+                    px.bar(_score_ag, x="AGENTE", y="Score_medio",
+                           color="Score_medio",
+                           color_continuous_scale=["#8C0000","#f1c40f","#008C36"],
+                           title="Score medio de sentimiento por agente",
+                           labels={"Score_medio": "Score (-1 neg → +1 pos)"}),
+                    use_container_width=True,
+                )
+
+    # ── SUBTAB 5: Incidentes recurrentes ─────────────────────────────────────
+    with _st5:
+        @st.fragment
+        def incidentes_recurrentes(df_filtrado):
+            rec = palabras_recurrentes(df_filtrado, 20)
+            if rec.empty:
+                st.info("Sin texto suficiente.")
+                return
+            st.plotly_chart(
+                px.bar(rec, x="Frecuencia", y="Palabra", orientation="h",
+                       title="Palabras más frecuentes en los tickets"),
+                use_container_width=True,
+            )
+            pal = st.selectbox("Ver tickets que contienen:", rec["Palabra"],
+                               key="pal_rec")
+            rel = df_filtrado[
+                df_filtrado["TEXTO_COMPLETO"].str.contains(
+                    pal, case=False, na=False, regex=False)
+            ]
+            st.caption(f"{len(rel)} tickets contienen '{pal}'")
+            _cols_r = [c for c in
+                ["TICKET_ID","TICKET_ASUNTO","GRUPO","AGENTE",
+                 "PRIORIDAD","DIAS","SENTIMIENTO"]
+                if c in rel.columns]
+            st.dataframe(rel[_cols_r], use_container_width=True)
+
+        incidentes_recurrentes(df_filtrado)
