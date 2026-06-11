@@ -1,0 +1,39 @@
+{
+  "algoritmo": "HistGradientBoostingClassifier + TF-IDF + SVD/LSA",
+  "version": "2.0",
+  "svd_dims": 150,
+  "features_num": [
+    "HORA_CREACION",
+    "DIA_SEMANA",
+    "MES_CREACION",
+    "ES_FIN_SEMANA",
+    "ES_HORA_PICO",
+    "SCORE_SENT_FILL",
+    "FLAG_URGENCIA",
+    "FLAG_CONFLICTO",
+    "HIST_AGENTE_AVG_DIAS"
+  ],
+  "features_cat": [
+    "PRIORIDAD",
+    "GRUPO",
+    "ORIGEN"
+  ],
+  "mejores_params": {
+    "lr": "0.1",
+    "max_iter": "200",
+    "max_depth": "4",
+    "min_leaf": "10"
+  },
+  "metricas_cv": {
+    "auc_roc_cv": 0.7452
+  },
+  "metricas_test": {
+    "auc_roc": 0.853,
+    "auc_pr": 0.5567,
+    "f1_clase_riesgo": 0.387,
+    "precision_riesgo": 0.2497,
+    "recall_riesgo": 0.8593
+  },
+  "n_train": 34614,
+  "n_test": 8654
+}
