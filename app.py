@@ -147,8 +147,8 @@ tiene_agente = "AGENTE" in df.columns
 FILTER_KEYS = [
     "f_grupos", "f_agentes_inc", "f_agentes_exc",
     "f_prioridades", "f_origenes",
-    "f_fechas",          # date_input de rango único
-    "f_fecha_preset",    # selectbox de preset rápido
+    "f_fechas",          # date_input de rango
+    "_fecha_default",    # key auxiliar de presets
     "f_dias", "f_busqueda",
     "f_ocultar_inactivos",
 ]
@@ -246,50 +246,61 @@ with st.sidebar:
     )
 
     # ── Rango de fechas ──────────────────────────────────────────────────────
-    # Solución robusta: un ÚNICO date_input de rango nativo (tuple de 2 dates).
-    # Los botones rápidos usan selectbox de preset → no tocan ninguna key
-    # de widget activo, eliminando completamente el StreamlitAPIException.
+    # Solución definitiva: NUNCA pasar value= dinámico a date_input.
+    # La key se inicializa en session_state ANTES del widget.
+    # Streamlit usa ese valor como default solo si la key no existe todavía.
+    # Los presets reinician la key y hacen rerun → el widget la recoge limpia.
 
     st.markdown("**Rango de creación**")
+    _hoy = datetime.date.today()
 
-    # Preset rápido: selectbox simple, sin conflicto de session_state
-    _hoy   = datetime.date.today()
-    _presets = {
-        "Rango personalizado": None,
-        "Últimos 7 días":      ((_hoy - datetime.timedelta(days=7)),   _hoy),
-        "Últimos 30 días":     ((_hoy - datetime.timedelta(days=30)),  _hoy),
-        "Últimos 90 días":     ((_hoy - datetime.timedelta(days=90)),  _hoy),
-        "Todo el histórico":   (ops["fecha_min"], ops["fecha_max"]),
-    }
-    _preset_sel = st.selectbox(
-        "Acceso rápido", list(_presets.keys()),
-        key="f_fecha_preset", label_visibility="collapsed",
-    )
+    # Botones de preset — cada uno escribe la key Y llama st.rerun()
+    # IMPORTANTE: pop("f_fechas") elimina el valor anterior ANTES de recrear
+    # el widget, así Streamlit usa el nuevo valor como default sin conflicto.
+    _pc1, _pc2, _pc3, _pc4 = st.columns(4)
+    if _pc1.button("7d",   use_container_width=True, key="btn_7d"):
+        st.session_state.pop("f_fechas", None)
+        st.session_state["_fecha_default"] = (
+            _hoy - datetime.timedelta(days=7), _hoy)
+        st.rerun()
+    if _pc2.button("30d",  use_container_width=True, key="btn_30d"):
+        st.session_state.pop("f_fechas", None)
+        st.session_state["_fecha_default"] = (
+            _hoy - datetime.timedelta(days=30), _hoy)
+        st.rerun()
+    if _pc3.button("90d",  use_container_width=True, key="btn_90d"):
+        st.session_state.pop("f_fechas", None)
+        st.session_state["_fecha_default"] = (
+            _hoy - datetime.timedelta(days=90), _hoy)
+        st.rerun()
+    if _pc4.button("Todo", use_container_width=True, key="btn_todo"):
+        st.session_state.pop("f_fechas", None)
+        st.session_state["_fecha_default"] = (
+            ops["fecha_min"], ops["fecha_max"])
+        st.rerun()
 
-    # Determinar valor inicial del rango
-    if _presets[_preset_sel] is not None:
-        _rango_default = _presets[_preset_sel]
-    else:
-        _rango_default = (ops["fecha_min"], ops["fecha_max"])
+    # Inicializar key con default si aún no existe (primera carga o tras limpiar)
+    if "f_fechas" not in st.session_state:
+        _def = st.session_state.pop("_fecha_default",
+                                    (ops["fecha_min"], ops["fecha_max"]))
+        st.session_state["f_fechas"] = _def
 
-    # UN solo date_input de rango — tipo nativo de Streamlit, sin keys auxiliares
+    # date_input de rango — value viene de session_state, NUNCA de variable dinámica
     _rango = st.date_input(
-        "Rango de fechas",
-        value=_rango_default,
+        "Rango de creación",
         min_value=ops["fecha_min"],
         max_value=ops["fecha_max"],
         key="f_fechas",
         label_visibility="collapsed",
-        format="DD/MM/YYYY",
     )
 
-    # Desempaquetar con seguridad (el usuario puede seleccionar solo 1 fecha)
+    # Desempaquetar con seguridad
     if isinstance(_rango, (list, tuple)) and len(_rango) == 2:
         fecha_ini, fecha_fin = _rango[0], _rango[1]
     elif isinstance(_rango, (list, tuple)) and len(_rango) == 1:
         fecha_ini = fecha_fin = _rango[0]
     else:
-        fecha_ini = fecha_fin = _rango  # date suelto
+        fecha_ini = fecha_fin = _rango
 
     # ── Días de resolución ───────────────────────────────────────────────────
     dias_sel = st.slider(
